@@ -39,6 +39,12 @@ class CRMFlowTests(TestCase):
             role='warehouse',
             first_name='Omborchi',
         )
+        self.supplier_user = User.objects.create_user(
+            username='supplier',
+            password='testpass123',
+            role='supplier',
+            first_name='Yetkazib',
+        )
         self.category = Category.objects.create(name='Monitor')
         self.client_obj = Client.objects.create(name='Klinika', phone='+998900000000')
         self.product = Product.objects.create(
@@ -96,6 +102,13 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Smenani boshlash")
+
+    def test_user_form_contains_supplier_role(self):
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('user_create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Yetkazib beruvchi')
 
     def test_director_sees_sales_and_transactions_links(self):
         self.client.force_login(self.director)

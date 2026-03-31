@@ -7,6 +7,7 @@ class User(AbstractUser):
         ('director', 'Direktor'),
         ('seller', 'Sotuvchi'),
         ('warehouse', 'Omborchi'),
+        ('supplier', 'Yetkazib beruvchi'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='seller')
     phone = models.CharField(max_length=20, blank=True)

@@ -29,7 +29,7 @@
                     <td>{{ user.get_full_name|default:user.username }}</td>
                     <td>{{ user.email|default:'-' }}</td>
                     <td>
-                        <span class="badge badge-{% if user.role == 'director' %}danger{% elif user.role == 'seller' %}primary{% else %}info{% endif %}">
+                        <span class="badge badge-{% if user.role == 'director' %}danger{% elif user.role == 'seller' %}primary{% elif user.role == 'supplier' %}warning{% else %}info{% endif %}">
                             {{ user.get_role_display }}
                         </span>
                     </td>

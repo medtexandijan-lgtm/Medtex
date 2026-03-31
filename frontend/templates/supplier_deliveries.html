@@ -14,6 +14,7 @@
             <select name="status" class="form-control">
                 <option value="">Barchasi</option>
                 <option value="confirmed" {% if request.GET.status == 'confirmed' %}selected{% endif %}>Yetkazilishi kerak</option>
+                <option value="delivering" {% if request.GET.status == 'delivering' %}selected{% endif %}>Yetkazib berilyapti</option>
                 <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Yetkazilgan</option>
             </select>
         </div>
@@ -43,7 +44,7 @@
                 <td>{{ order.comment|default:"-" }}</td>
                 <td>{{ order.total_amount|floatformat:0 }} so'm</td>
                 <td>
-                    <span class="badge badge-{% if order.status == 'confirmed' %}primary{% else %}success{% endif %}">
+                    <span class="badge badge-{% if order.status == 'confirmed' %}primary{% elif order.status == 'delivering' %}info{% else %}success{% endif %}">
                         {{ order.get_status_display }}
                     </span>
                 </td>

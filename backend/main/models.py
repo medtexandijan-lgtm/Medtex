@@ -196,6 +196,7 @@ class TelegramOrder(models.Model):
     STATUS_CHOICES = [
         ('new', 'Yangi'),
         ('confirmed', 'Tasdiqlangan'),
+        ('delivering', 'Yetkazib berilyapti'),
         ('cancelled', 'Bekor qilingan'),
         ('completed', 'Yakunlangan'),
     ]

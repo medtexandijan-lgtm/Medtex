@@ -34,7 +34,7 @@ from .models import (
     User,
     WarehouseTransaction,
 )
-from .telegram_bot import bot_enabled, process_update, validate_init_data
+from .telegram_bot import bot_enabled, process_update, send_message, validate_init_data
 
 
 MINI_APP_TOKEN_SALT = 'mini-app-auth'
@@ -97,7 +97,7 @@ def build_shift_report_context(shift):
 
 def get_supplier_delivery_queryset(user):
     return TelegramOrder.objects.filter(
-        status__in={'confirmed', 'completed'},
+        status__in={'confirmed', 'delivering', 'completed'},
     ).select_related('profile__user', 'sale').prefetch_related('items__product').order_by('-created_at')
 
 
@@ -128,6 +128,15 @@ def get_or_create_client_from_order(order):
         phone=order.phone,
         address=order.comment,
     )
+
+
+def notify_order_profile(profile, text):
+    if not profile or not profile.chat_id or not bot_enabled():
+        return
+    try:
+        send_message(profile.chat_id, text)
+    except Exception:
+        return
 
 
 def get_mini_app_profile(request):
@@ -1000,12 +1009,14 @@ def shift_report(request, pk):
 
 @login_required
 def telegram_orders_list(request):
-    if not user_has_role(request.user, 'director', 'seller'):
+    if not user_has_role(request.user, 'director', 'seller', 'supplier'):
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 
     status = request.GET.get('status', '')
     orders = TelegramOrder.objects.select_related('profile__user', 'sale').order_by('-created_at')
+    if request.user.role == 'supplier':
+        orders = orders.filter(status__in={'confirmed', 'delivering', 'completed'})
     if status:
         orders = orders.filter(status=status)
 
@@ -1014,7 +1025,7 @@ def telegram_orders_list(request):
 
 @login_required
 def telegram_order_detail(request, pk):
-    if not user_has_role(request.user, 'director', 'seller'):
+    if not user_has_role(request.user, 'director', 'seller', 'supplier'):
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 
@@ -1106,6 +1117,10 @@ def telegram_order_update_status(request, pk):
             order.status = 'confirmed'
             order.save(update_fields=['sale', 'status'])
 
+        notify_order_profile(
+            order.profile,
+            f"Buyurtmangiz qabul qilindi. Buyurtma raqami: #{order.id}. Tez orada yetkazib beruvchi siz bilan bog'lanadi.",
+        )
         messages.success(request, "Buyurtma tasdiqlandi va sotuv yaratildi")
         return redirect('telegram_order_detail', pk=pk)
 
@@ -1118,12 +1133,6 @@ def telegram_order_update_status(request, pk):
         order.status = 'cancelled'
         order.save(update_fields=['status'])
         messages.success(request, "Buyurtma bekor qilindi")
-        return redirect('telegram_order_detail', pk=pk)
-
-    if new_status == 'completed':
-        order.status = 'completed'
-        order.save(update_fields=['status'])
-        messages.success(request, "Buyurtma yakunlandi")
         return redirect('telegram_order_detail', pk=pk)
 
     order.status = new_status
@@ -1196,12 +1205,26 @@ def supplier_delivery_complete(request, pk):
         return redirect('dashboard')
 
     order = get_object_or_404(get_supplier_delivery_queryset(request.user), pk=pk)
-    if order.status != 'confirmed':
+    if order.status == 'confirmed':
+        order.status = 'delivering'
+        order.save(update_fields=['status'])
+        notify_order_profile(
+            order.profile,
+            f"Buyurtmangiz qabul qilindi va mahsulot yetkazib berilyapti. Buyurtma raqami: #{order.id}.",
+        )
+        messages.success(request, "Buyurtma yetkazib berish jarayoniga o'tdi")
+        return redirect('supplier_delivery_detail', pk=pk)
+
+    if order.status != 'delivering':
         messages.info(request, "Bu buyurtma allaqachon yetkazib bo'lingan")
         return redirect('supplier_delivery_detail', pk=pk)
 
     order.status = 'completed'
     order.save(update_fields=['status'])
+    notify_order_profile(
+        order.profile,
+        f"Buyurtmangiz muvaffaqiyatli yetkazildi. Buyurtma raqami: #{order.id}.",
+    )
     messages.success(request, "Buyurtma mijozga yetkazildi")
     return redirect('supplier_delivery_detail', pk=pk)
 

@@ -15,6 +15,7 @@
                 <option value="">Barchasi</option>
                 <option value="new" {% if request.GET.status == 'new' %}selected{% endif %}>Yangi</option>
                 <option value="confirmed" {% if request.GET.status == 'confirmed' %}selected{% endif %}>Tasdiqlangan</option>
+                <option value="delivering" {% if request.GET.status == 'delivering' %}selected{% endif %}>Yetkazib berilyapti</option>
                 <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Bekor qilingan</option>
                 <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Yakunlangan</option>
             </select>
@@ -45,7 +46,7 @@
                 <td>@{{ order.profile.chat_username|default:'-' }}</td>
                 <td>{{ order.total_amount|floatformat:0 }} so'm</td>
                 <td>
-                    <span class="badge badge-{% if order.status == 'new' %}warning{% elif order.status == 'confirmed' %}primary{% elif order.status == 'completed' %}success{% else %}danger{% endif %}">
+                    <span class="badge badge-{% if order.status == 'new' %}warning{% elif order.status == 'confirmed' %}primary{% elif order.status == 'delivering' %}info{% elif order.status == 'completed' %}success{% else %}danger{% endif %}">
                         {{ order.get_status_display }}
                     </span>
                 </td>

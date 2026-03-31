@@ -123,10 +123,10 @@ class CRMFlowTests(TestCase):
         response = self.client.get(reverse('products'))
         self.assertRedirects(response, reverse('dashboard'))
 
-    def test_supplier_cannot_open_telegram_orders_management(self):
+    def test_supplier_can_open_telegram_orders_management(self):
         self.client.force_login(self.supplier_user)
         response = self.client.get(reverse('telegram_orders'))
-        self.assertRedirects(response, reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
 
     def test_supplier_can_view_confirmed_delivery_orders(self):
         profile = TelegramProfile.objects.create(chat_id=45678, chat_username='delivery_user')
@@ -157,7 +157,8 @@ class CRMFlowTests(TestCase):
         response = self.client.get('/supplier/supplies/')
         self.assertRedirects(response, reverse('supplier_deliveries'))
 
-    def test_supplier_can_complete_confirmed_delivery(self):
+    @patch('main.views.send_message')
+    def test_supplier_can_accept_confirmed_delivery(self, mock_send_message):
         profile = TelegramProfile.objects.create(chat_id=45679, chat_username='delivery_done')
         order = TelegramOrder.objects.create(
             profile=profile,
@@ -179,8 +180,38 @@ class CRMFlowTests(TestCase):
         order.refresh_from_db()
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(order.status, 'delivering')
+        self.assertContains(response, "yetkazib berish jarayoniga o&#x27;tdi", html=False)
+        mock_send_message.assert_called_once()
+        self.assertIn("mahsulot yetkazib berilyapti", mock_send_message.call_args.args[1])
+
+    @patch('main.views.send_message')
+    def test_supplier_can_complete_delivery_after_accepting(self, mock_send_message):
+        profile = TelegramProfile.objects.create(chat_id=45680, chat_username='delivery_finished')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Mijoz Yetkazildi',
+            phone='+998901234502',
+            comment='Qo`qon',
+            total_amount=self.product.price,
+            status='delivering',
+        )
+        order.items.create(
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=self.product.price,
+        )
+
+        self.client.force_login(self.supplier_user)
+        response = self.client.post(reverse('supplier_delivery_complete', args=[order.id]), follow=True)
+        order.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(order.status, 'completed')
         self.assertContains(response, 'mijozga yetkazildi', html=False)
+        mock_send_message.assert_called_once()
+        self.assertIn("muvaffaqiyatli yetkazildi", mock_send_message.call_args.args[1])
 
     def test_director_sees_shift_buttons_for_seller_in_users_list(self):
         self.client.force_login(self.director)
@@ -491,7 +522,8 @@ class CRMFlowTests(TestCase):
         self.assertEqual(len(payload['orders']), 1)
         self.assertEqual(payload['orders'][0]['id'], order.id)
 
-    def test_confirming_telegram_order_creates_sale(self):
+    @patch('main.views.send_message')
+    def test_confirming_telegram_order_creates_sale(self, mock_send_message):
         profile = TelegramProfile.objects.create(chat_id=12345, chat_username='customer1')
         order = TelegramOrder.objects.create(
             profile=profile,
@@ -522,6 +554,8 @@ class CRMFlowTests(TestCase):
         self.assertIsNotNone(order.sale)
         self.assertEqual(order.sale.client.phone, '+998901112233')
         self.assertEqual(self.product.stock, 8)
+        mock_send_message.assert_called_once()
+        self.assertIn("Buyurtmangiz qabul qilindi", mock_send_message.call_args.args[1])
 
     def test_cancelling_confirmed_telegram_order_restores_stock(self):
         profile = TelegramProfile.objects.create(chat_id=12346, chat_username='customer2')

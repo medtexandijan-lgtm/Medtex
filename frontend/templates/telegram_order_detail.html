@@ -18,7 +18,7 @@
             <span>Telegram: @{{ order.profile.chat_username|default:'-' }}</span>
             <span>
                 Holat:
-                <span class="badge badge-{% if order.status == 'new' %}warning{% elif order.status == 'confirmed' %}primary{% elif order.status == 'completed' %}success{% else %}danger{% endif %}">
+                <span class="badge badge-{% if order.status == 'new' %}warning{% elif order.status == 'confirmed' %}primary{% elif order.status == 'delivering' %}info{% elif order.status == 'completed' %}success{% else %}danger{% endif %}">
                     {{ order.get_status_display }}
                 </span>
             </span>
@@ -98,15 +98,6 @@
                 <button type="submit" class="btn btn-danger">Bekor qilish</button>
             </form>
         </div>
-    </div>
-    {% elif order.status == 'confirmed' %}
-    <div class="detail-section">
-        <h3 class="detail-section-title">Amallar</h3>
-        <form method="post" action="{% url 'telegram_order_update_status' order.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="completed">
-            <button type="submit" class="btn btn-success">Yakunlangan deb belgilash</button>
-        </form>
     </div>
     {% endif %}
 </div>

@@ -18,7 +18,7 @@
             <span>Telegram: @{{ order.profile.chat_username|default:'-' }}</span>
             <span>
                 Holat:
-                <span class="badge badge-{% if order.status == 'confirmed' %}primary{% else %}success{% endif %}">
+                <span class="badge badge-{% if order.status == 'confirmed' %}primary{% elif order.status == 'delivering' %}info{% else %}success{% endif %}">
                     {{ order.get_status_display }}
                 </span>
             </span>
@@ -84,6 +84,14 @@
     </div>
 
     {% if order.status == 'confirmed' %}
+    <div class="detail-section">
+        <h3 class="detail-section-title">Amallar</h3>
+        <form method="post" action="{% url 'supplier_delivery_complete' order.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Buyurtmani qabul qilish</button>
+        </form>
+    </div>
+    {% elif order.status == 'delivering' %}
     <div class="detail-section">
         <h3 class="detail-section-title">Amallar</h3>
         <form method="post" action="{% url 'supplier_delivery_complete' order.id %}">

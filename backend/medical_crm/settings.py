@@ -45,6 +45,21 @@ app_base_url = os.getenv('APP_BASE_URL', '').strip().rstrip('/')
 if app_base_url and app_base_url not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(app_base_url)
 
+for host in ALLOWED_HOSTS:
+    host = host.strip()
+    if not host or host == '*':
+        continue
+    https_origin = f'https://{host}'
+    if https_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(https_origin)
+
+railway_origin = 'https://*.up.railway.app'
+if railway_origin not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(railway_origin)
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 
 # Application definition
 

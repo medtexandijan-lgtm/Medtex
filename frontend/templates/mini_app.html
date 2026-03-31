@@ -1,0 +1,475 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical CRM Mini App</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background: var(--bg);
+        }
+
+        .mini-shell {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 16px 16px 120px;
+        }
+
+        .mini-top {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .mini-top p {
+            margin-top: 8px;
+            color: var(--gray);
+        }
+
+        .mini-status {
+            margin-top: 12px;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .mini-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .mini-products {
+            display: grid;
+            gap: 12px;
+        }
+
+        .mini-product {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .mini-product-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .mini-product-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .mini-product-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .mini-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            white-space: nowrap;
+        }
+
+        .mini-product-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .mini-qty {
+            width: 90px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font: inherit;
+        }
+
+        .mini-cart {
+            position: sticky;
+            bottom: 12px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 20px;
+        }
+
+        .mini-cart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .mini-cart-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mini-cart-line:last-child {
+            border-bottom: none;
+        }
+
+        .mini-empty {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .mini-total {
+            margin-top: 12px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .mini-form-group {
+            margin-top: 14px;
+        }
+
+        .mini-form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--dark);
+        }
+
+        .mini-form-group input,
+        .mini-form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font: inherit;
+            background: var(--white);
+        }
+
+        .mini-form-group textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        .mini-message {
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        .mini-orders {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
+
+        .mini-order {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mini-order:last-child {
+            border-bottom: none;
+        }
+
+        .mini-order-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .mini-order-items {
+            color: var(--gray);
+            font-size: 14px;
+            display: grid;
+            gap: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .mini-product-head {
+                flex-direction: column;
+            }
+
+            .mini-product-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .mini-qty {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="mini-shell">
+        <section class="mini-top">
+            <h1 class="page-title">Telegram buyurtma</h1>
+            <p>Mahsulot tanlang, savat tuzing va buyurtmani CRM ga yuboring.</p>
+            <div class="mini-status" id="status">Telegram orqali tasdiqlanmoqda...</div>
+        </section>
+
+        <div class="mini-grid">
+            <section class="mini-products" id="products"></section>
+
+            <aside class="mini-cart">
+                <div class="mini-cart-title">Savat</div>
+                <div id="cart-lines" class="mini-empty">Hozircha savat bo'sh.</div>
+                <div class="mini-total">Jami: <span id="cart-total">0</span> so'm</div>
+
+                <div class="mini-form-group">
+                    <label for="full_name">Ism</label>
+                    <input id="full_name" placeholder="To'liq ism">
+                </div>
+
+                <div class="mini-form-group">
+                    <label for="phone">Telefon</label>
+                    <input id="phone" placeholder="+998 90 123 45 67">
+                </div>
+
+                <div class="mini-form-group">
+                    <label for="comment">Izoh</label>
+                    <textarea id="comment" placeholder="Manzil yoki qo'shimcha izoh"></textarea>
+                </div>
+
+                <button class="btn btn-primary btn-block" id="submit-order" style="margin-top: 16px;">Buyurtma yuborish</button>
+                <div class="mini-message" id="success-message"></div>
+            </aside>
+
+            <section class="mini-orders">
+                <div class="mini-cart-title">Buyurtmalarim</div>
+                <div id="orders-list" class="mini-empty">Buyurtmalar hali yo'q.</div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        const statusNode = document.getElementById('status');
+        const productsNode = document.getElementById('products');
+        const cartLinesNode = document.getElementById('cart-lines');
+        const cartTotalNode = document.getElementById('cart-total');
+        const successNode = document.getElementById('success-message');
+        const submitButton = document.getElementById('submit-order');
+        const ordersListNode = document.getElementById('orders-list');
+        const cart = new Map();
+        let authToken = '';
+        let products = [];
+        let orders = [];
+
+        function formatPrice(value) {
+            return Number(value).toLocaleString('uz-UZ');
+        }
+
+        function renderProducts() {
+            productsNode.innerHTML = '';
+            if (!products.length) {
+                productsNode.innerHTML = '<div class="mini-product mini-empty">Mahsulot topilmadi.</div>';
+                return;
+            }
+
+            products.forEach((product) => {
+                const card = document.createElement('div');
+                card.className = 'mini-product';
+                card.innerHTML = `
+                    <div class="mini-product-head">
+                        <div>
+                            <div class="mini-product-name">${product.name}</div>
+                            <div class="mini-product-meta">
+                                <span class="badge badge-primary">${product.category__name || 'Kategoriya yo\'q'}</span>
+                                <span>Qoldiq: ${product.stock} ${product.unit}</span>
+                            </div>
+                        </div>
+                        <div class="mini-price">${formatPrice(product.price)} so'm</div>
+                    </div>
+                    <div class="mini-product-actions">
+                        <input class="mini-qty" type="number" min="1" max="${product.stock}" value="1">
+                        <button class="btn btn-primary">Savatga qo'shish</button>
+                    </div>
+                `;
+
+                const qtyInput = card.querySelector('.mini-qty');
+                const button = card.querySelector('.btn');
+                button.addEventListener('click', () => {
+                    const quantity = Number(qtyInput.value || 1);
+                    if (!quantity || quantity < 1) {
+                        return;
+                    }
+                    cart.set(product.id, {
+                        product_id: product.id,
+                        name: product.name,
+                        quantity,
+                        unit_price: Number(product.price),
+                    });
+                    renderCart();
+                });
+
+                productsNode.appendChild(card);
+            });
+        }
+
+        function renderCart() {
+            if (!cart.size) {
+                cartLinesNode.className = 'mini-empty';
+                cartLinesNode.textContent = "Hozircha savat bo'sh.";
+                cartTotalNode.textContent = '0';
+                return;
+            }
+
+            cartLinesNode.className = '';
+            cartLinesNode.innerHTML = '';
+            let total = 0;
+
+            for (const item of cart.values()) {
+                const lineTotal = item.quantity * item.unit_price;
+                total += lineTotal;
+
+                const row = document.createElement('div');
+                row.className = 'mini-cart-line';
+                row.innerHTML = `
+                    <div>${item.name} x ${item.quantity}</div>
+                    <div>${formatPrice(lineTotal)} so'm</div>
+                `;
+                cartLinesNode.appendChild(row);
+            }
+
+            cartTotalNode.textContent = formatPrice(total);
+        }
+
+        function renderOrders() {
+            if (!orders.length) {
+                ordersListNode.className = 'mini-empty';
+                ordersListNode.textContent = "Buyurtmalar hali yo'q.";
+                return;
+            }
+
+            ordersListNode.className = '';
+            ordersListNode.innerHTML = '';
+
+            orders.forEach((order) => {
+                const node = document.createElement('div');
+                node.className = 'mini-order';
+                const itemsHtml = (order.items || [])
+                    .map((item) => `<div>${item.product_name} x ${item.quantity}</div>`)
+                    .join('');
+
+                node.innerHTML = `
+                    <div class="mini-order-head">
+                        <strong>Buyurtma #${order.id}</strong>
+                        <span class="badge badge-primary">${order.status_display || order.status}</span>
+                    </div>
+                    <div class="mini-order-items">
+                        <div>${new Date(order.created_at).toLocaleString('uz-UZ')}</div>
+                        <div>Jami: ${formatPrice(order.total_amount)} so'm</div>
+                        ${itemsHtml}
+                    </div>
+                `;
+                ordersListNode.appendChild(node);
+            });
+        }
+
+        async function loadOrders() {
+            if (!authToken) return;
+            const result = await api('/mini-app/orders/history/');
+            if (result.ok) {
+                orders = result.orders || [];
+                renderOrders();
+            }
+        }
+
+        async function api(url, options = {}) {
+            const headers = options.headers || {};
+            headers['Content-Type'] = 'application/json';
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            const response = await fetch(url, { ...options, headers });
+            return response.json();
+        }
+
+        async function bootstrap() {
+            if (!tg) {
+                statusNode.textContent = 'Telegram WebApp topilmadi. Bu sahifani bot ichidan oching.';
+                submitButton.disabled = true;
+                return;
+            }
+
+            tg.ready();
+            tg.expand();
+
+            const result = await api('/mini-app/auth/', {
+                method: 'POST',
+                body: JSON.stringify({ initData: tg.initData }),
+            });
+
+            if (!result.ok) {
+                statusNode.textContent = result.error || 'Autentifikatsiya amalga oshmadi.';
+                submitButton.disabled = true;
+                return;
+            }
+
+            authToken = result.token;
+            products = result.products || [];
+            orders = result.orders || [];
+            statusNode.textContent = result.profile?.linked_user
+                ? `Bog'langan user: ${result.profile.linked_user}`
+                : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
+            renderProducts();
+            renderOrders();
+        }
+
+        submitButton.addEventListener('click', async () => {
+            successNode.textContent = '';
+
+            if (!cart.size) {
+                statusNode.textContent = "Avval savatga mahsulot qo'shing.";
+                return;
+            }
+
+            const fullName = document.getElementById('full_name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const comment = document.getElementById('comment').value.trim();
+
+            const result = await api('/mini-app/orders/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    full_name: fullName,
+                    phone,
+                    comment,
+                    items: Array.from(cart.values()).map((item) => ({
+                        product_id: item.product_id,
+                        quantity: item.quantity,
+                    })),
+                }),
+            });
+
+            if (!result.ok) {
+                statusNode.textContent = result.error || 'Buyurtma yuborilmadi.';
+                return;
+            }
+
+            successNode.textContent = `Buyurtma qabul qilindi. ID: #${result.order_id}`;
+            successNode.style.color = 'var(--success)';
+            cart.clear();
+            renderCart();
+            await loadOrders();
+            tg.HapticFeedback?.notificationOccurred('success');
+        });
+
+        renderCart();
+        bootstrap();
+    </script>
+</body>
+</html>

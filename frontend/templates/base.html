@@ -1,0 +1,133 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tibbiyot Jihozlari CRM{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if request.user.is_authenticated %}
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                    </div>
+                    <span class="sidebar-logo-text">Medical CRM</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                {% if request.user.role == 'director' %}
+                <div class="nav-section">
+                    <div class="nav-section-title">Boshqaruv</div>
+                    <a href="{% url 'dashboard' %}" class="nav-item {% if request.path == '/dashboard/' %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                        <span>Boshqaruv paneli</span>
+                    </a>
+                    <a href="{% url 'reports' %}" class="nav-item {% if '/reports' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        <span>Hisobotlar</span>
+                    </a>
+                    <a href="{% url 'users' %}" class="nav-item {% if '/users' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                        <span>Foydalanuvchilar</span>
+                    </a>
+                </div>
+                {% endif %}
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Ma'lumotlar</div>
+                    {% if request.user.role != 'seller' %}
+                    <a href="{% url 'clients' %}" class="nav-item {% if '/clients' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                        <span>Mijozlar</span>
+                    </a>
+                    <a href="{% url 'products' %}" class="nav-item {% if '/products' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
+                        <span>Mahsulotlar</span>
+                    </a>
+                    <a href="{% url 'categories' %}" class="nav-item {% if '/categories' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/></svg>
+                        <span>Kategoriyalar</span>
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Savdo</div>
+                    {% if request.user.role == 'seller' %}
+                    <a href="{% url 'kassa' %}" class="nav-item {% if '/kassa' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/></svg>
+                        <span>Kassa</span>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'sales' %}" class="nav-item {% if '/sales' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                        <span>Sotuvlar</span>
+                    </a>
+                    {% if request.user.role == 'seller' %}
+                    <a href="{% url 'reports' %}" class="nav-item {% if request.path == '/reports/' or '/shift/' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        <span>Smena hisobotlari</span>
+                    </a>
+                    {% endif %}
+                    {% if request.user.role == 'director' or request.user.role == 'seller' %}
+                    <a href="{% url 'telegram_orders' %}" class="nav-item {% if '/telegram-orders' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M21.5 3.5 2.9 10.66c-.86.34-.84 1.57.03 1.88l4.72 1.69 1.68 4.72c.31.87 1.54.89 1.88.03L20.5 5.38c.31-.83-.52-1.66-1.35-1.35zM9.5 13.42l7.88-7.88-6.17 9.63-.57 2.3-.63-1.77-.51-1.45z"/></svg>
+                        <span>Telegram buyurtmalar</span>
+                    </a>
+                    {% endif %}
+                </div>
+                
+                {% if request.user.role == 'director' or request.user.role == 'warehouse' %}
+                <div class="nav-section">
+                    <div class="nav-section-title">Ombor</div>
+                    <a href="{% url 'warehouse' %}" class="nav-item {% if '/warehouse' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
+                        <span>Ombor</span>
+                    </a>
+                    <a href="{% url 'transactions' %}" class="nav-item {% if '/transactions' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                        <span>Operatsiyalar</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">{{ request.user.first_name.0|upper }}{{ request.user.last_name.0|upper }}</div>
+                    <div class="user-details">
+                        <div class="user-name">{{ request.user.get_full_name }}</div>
+                        <div class="user-role">{{ request.user.get_role_display }}</div>
+                    </div>
+                    <a href="{% url 'logout' %}" style="color: var(--gray-light);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                    </a>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" style="margin: 20px 32px 0;">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    {% block login_content %}{% endblock %}
+    {% endif %}
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

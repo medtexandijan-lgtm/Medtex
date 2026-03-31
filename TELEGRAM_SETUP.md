@@ -51,6 +51,7 @@ Mini App imkoniyatlari:
 - katalogni ko'rish
 - savat yig'ish
 - buyurtma yuborish
+- buyurtma holatini ko'rish
 - buyurtmani CRM ichida ko'rish
 
 ## CRM ichida ko'rish

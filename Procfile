@@ -1,1 +1,1 @@
-web: gunicorn medical_crm.wsgi --log-file -
+web: gunicorn --chdir backend medical_crm.wsgi --log-file -

@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block title %}Boshqaruv paneli - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Boshqaruv paneli</h1>
+    <div class="page-actions">
+        <span style="color: var(--gray);">{{ request.user.get_role_display }}</span>
+    </div>
+</div>
+
+<div class="page-content">
+    {% if request.user.role == 'director' %}
+    <div class="cards-grid">
+        <div class="card stat-card">
+            <div class="card-icon warning">
+                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ total_clients }}</div>
+                <div class="card-label">Mijozlar</div>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="card-icon primary">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ total_products }}</div>
+                <div class="card-label">Mahsulotlar</div>
+            </div>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="card-icon success">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ total_sales }}</div>
+                <div class="card-label">Sotuvlar</div>
+            </div>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="card-icon info">
+                <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.68 3.74V19h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ total_revenue|floatformat:0 }} so'm</div>
+                <div class="card-label">Jami daromad</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="table-container">
+        <div class="table-header">
+            <h3 class="table-title">Oxirgi sotuvlar</h3>
+            <a href="{% url 'sales' %}" class="btn btn-secondary btn-sm">Barchasini ko'rish</a>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Mijoz</th>
+                    <th>Sotuvchi</th>
+                    <th>Summa</th>
+                    <th>Holat</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in recent_sales %}
+                <tr>
+                    <td>#{{ sale.id }}</td>
+                    <td>{{ sale.client.name|default:"Walk-in mijoz" }}</td>
+                    <td>{{ sale.seller.get_full_name }}</td>
+                    <td>{{ sale.total_amount|floatformat:0 }} so'm</td>
+                    <td>
+                        <span class="badge badge-{% if sale.status == 'completed' %}success{% elif sale.status == 'pending' %}warning{% elif sale.status == 'cancelled' %}danger{% else %}info{% endif %}">
+                            {{ sale.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ sale.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <p>Hozircha sotuvlar yo'q</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% elif request.user.role == 'seller' %}
+    <div class="cards-grid">
+        <div class="card stat-card">
+            <div class="card-icon {% if active_shift %}success{% else %}danger{% endif %}">
+                <svg viewBox="0 0 24 24"><path d="M12 1a11 11 0 1 0 11 11A11 11 0 0 0 12 1zm1 11.41V6h-2v7h6v-2z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{% if active_shift %}Ochiq{% else %}Yopiq{% endif %}</div>
+                <div class="card-label">
+                    {% if active_shift %}
+                    {{ active_shift.started_at|date:"d.m.Y H:i" }} dan
+                    {% else %}
+                    Smena faol emas
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="card-icon primary">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ my_sales }}</div>
+                <div class="card-label">Jami sotuvlar</div>
+            </div>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="card-icon success">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ today_sales }}</div>
+                <div class="card-label">Bugungi sotuvlar</div>
+            </div>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="card-icon warning">
+                <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.68 3.74V19h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ my_revenue|floatformat:0 }} so'm</div>
+                <div class="card-label">Jami daromad</div>
+            </div>
+        </div>
+    </div>
+
+    {% if last_closed_shift %}
+    <div class="card" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div>
+                <h3 style="margin-bottom: 8px;">Oxirgi yopilgan smena</h3>
+                <p style="color: var(--gray); margin: 0;">
+                    {{ last_closed_shift.started_at|date:"d.m.Y H:i" }} - {{ last_closed_shift.ended_at|date:"d.m.Y H:i" }}
+                </p>
+            </div>
+            <a href="{% url 'shift_report' last_closed_shift.id %}" class="btn btn-secondary">Hisobotni ko'rish</a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="table-container">
+        <div class="table-header">
+            <h3 class="table-title">Mening sotuvlarim</h3>
+            {% if active_shift %}
+            <a href="{% url 'sale_create' %}" class="btn btn-primary btn-sm">Yangi sotuv</a>
+            {% endif %}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Mijoz</th>
+                    <th>Summa</th>
+                    <th>Holat</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in recent_sales %}
+                <tr>
+                    <td>#{{ sale.id }}</td>
+                    <td>{{ sale.client.name|default:"Walk-in mijoz" }}</td>
+                    <td>{{ sale.total_amount|floatformat:0 }} so'm</td>
+                    <td>
+                        <span class="badge badge-{% if sale.status == 'completed' %}success{% elif sale.status == 'pending' %}warning{% elif sale.status == 'cancelled' %}danger{% else %}info{% endif %}">
+                            {{ sale.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ sale.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <p>Hozircha sotuvlar yo'q</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% elif request.user.role == 'warehouse' %}
+    <div class="cards-grid">
+        <div class="card stat-card">
+            <div class="card-icon primary">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ total_products }}</div>
+                <div class="card-label">Mahsulot turlari</div>
+            </div>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="card-icon danger">
+                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ low_stock }}</div>
+                <div class="card-label">Kam qolgan</div>
+            </div>
+        </div>
+        
+        <div class="card stat-card">
+            <div class="card-icon success">
+                <svg viewBox="0 0 24 24"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ total_stock }}</div>
+                <div class="card-label">Jami soni</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="table-container">
+        <div class="table-header">
+            <h3 class="table-title">Oxirgi operatsiyalar</h3>
+            <a href="{% url 'warehouse_transaction' %}" class="btn btn-primary btn-sm">Yangi operatsiya</a>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mahsulot</th>
+                    <th>Amal turi</th>
+                    <th>Soni</th>
+                    <th>Kim</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in recent_transactions %}
+                <tr>
+                    <td>{{ t.product.name }}</td>
+                    <td>
+                        <span class="badge badge-{% if t.transaction_type == 'in' %}success{% else %}danger{% endif %}">
+                            {{ t.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td>{{ t.quantity }} {{ t.product.unit }}</td>
+                    <td>{{ t.created_by.get_full_name }}</td>
+                    <td>{{ t.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <p>Hozircha operatsiyalar yo'q</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

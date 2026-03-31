@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Yangi sotuv - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Yangi sotuv</h1>
+</div>
+
+<div class="page-content">
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+        {% if request.user.role == 'seller' and active_shift %}
+        <div class="alert alert-success" style="margin-bottom: 20px;">
+            Faol smena: {{ active_shift.started_at|date:"d.m.Y H:i" }}
+        </div>
+        {% endif %}
+        <form method="post" id="sale-form">
+            {% csrf_token %}
+            {% if request.user.role != 'seller' %}
+            <div class="form-group">
+                <label class="form-label">Mijoz</label>
+                <select name="client" class="form-control">
+                    <option value="">-- Walk-in mijoz --</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}">{{ client.name }} - {{ client.phone }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label class="form-label">Izoh</label>
+                <textarea name="notes" class="form-control" rows="2" placeholder="Izoh (ixtiyoriy)"></textarea>
+            </div>
+
+            <h3 style="margin-bottom: 16px;">Mahsulotlar</h3>
+            <div id="products-container">
+                <div class="product-row form-row" style="margin-bottom: 16px; align-items: flex-end;">
+                    <div style="flex: 2;">
+                        <label class="form-label">Mahsulot</label>
+                        <select name="product_id[]" class="form-control product-select" required>
+                            <option value="">-- Mahsulotni tanlang --</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock }}">
+                                {{ product.name }} - {{ product.price|floatformat:0 }} so'm (omborda: {{ product.stock }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="form-label">Soni</label>
+                        <input type="number" name="quantity[]" class="form-control" min="1" value="1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addProductRow()">+ Mahsulot qo'shish</button>
+            
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Sotuvni yakunlash</button>
+                <a href="{% url 'sales' %}" class="btn btn-secondary">Bekor qilish</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function addProductRow() {
+    const container = document.getElementById('products-container');
+    const row = document.createElement('div');
+    row.className = 'product-row form-row';
+    row.style.marginBottom = '16px';
+    row.style.alignItems = 'flex-end';
+    row.innerHTML = `
+        <div style="flex: 2;">
+            <select name="product_id[]" class="form-control product-select" required>
+                <option value="">-- Mahsulotni tanlang --</option>
+                {% for product in products %}
+                <option value="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock }}">
+                    {{ product.name }} - {{ product.price|floatformat:0 }} so'm (omborda: {{ product.stock }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex: 1;">
+            <input type="number" name="quantity[]" class="form-control" min="1" value="1" required>
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()" style="margin-bottom: 0;">X</button>
+    `;
+    container.appendChild(row);
+}
+</script>
+{% endblock %}

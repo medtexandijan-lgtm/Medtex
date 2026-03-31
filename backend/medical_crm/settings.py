@@ -34,6 +34,17 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,*').split(',')
 
+CSRF_TRUSTED_ORIGINS = []
+csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+for origin in csrf_origins:
+    origin = origin.strip().rstrip('/')
+    if origin:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
+app_base_url = os.getenv('APP_BASE_URL', '').strip().rstrip('/')
+if app_base_url and app_base_url not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(app_base_url)
+
 
 # Application definition
 

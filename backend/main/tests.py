@@ -70,12 +70,39 @@ class CRMFlowTests(TestCase):
         response = self.client.get(reverse('categories'))
         self.assertRedirects(response, reverse('dashboard'))
 
+    def test_warehouse_cannot_open_clients_page(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.get(reverse('clients'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_warehouse_cannot_open_categories_page(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.get(reverse('categories'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_warehouse_cannot_open_sales_page(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.get(reverse('sales'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_warehouse_cannot_open_transactions_history(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.get(reverse('transactions'))
+        self.assertRedirects(response, reverse('dashboard'))
+
     def test_director_sees_shift_buttons_for_seller_in_users_list(self):
         self.client.force_login(self.director)
         response = self.client.get(reverse('users'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Smenani boshlash")
+
+    def test_director_sees_sales_and_transactions_links(self):
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertContains(response, reverse('sales'))
+        self.assertContains(response, reverse('transactions'))
 
     def test_seller_cannot_create_sale_without_open_shift(self):
         self.client.force_login(self.seller)

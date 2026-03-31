@@ -386,8 +386,8 @@ def user_delete(request, pk):
 
 @login_required
 def categories_list(request):
-    if request.user.role == 'seller':
-        messages.error(request, "Sotuvchi uchun kategoriyalar bo'limi yopilgan")
+    if request.user.role in {'seller', 'warehouse'}:
+        messages.error(request, "Siz uchun kategoriyalar bo'limi yopilgan")
         return redirect('dashboard')
 
     categories = Category.objects.annotate(product_count=Count('products'))
@@ -521,8 +521,8 @@ def product_detail(request, pk):
 
 @login_required
 def clients_list(request):
-    if request.user.role == 'seller':
-        messages.error(request, "Sotuvchi uchun mijozlar ro'yxati yopilgan")
+    if request.user.role in {'seller', 'warehouse'}:
+        messages.error(request, "Siz uchun mijozlar ro'yxati yopilgan")
         return redirect('dashboard')
 
     search = request.GET.get('search', '')
@@ -583,8 +583,8 @@ def client_delete(request, pk):
 
 @login_required
 def client_detail(request, pk):
-    if request.user.role == 'seller':
-        messages.error(request, "Sotuvchi uchun mijozlar ro'yxati yopilgan")
+    if request.user.role in {'seller', 'warehouse'}:
+        messages.error(request, "Siz uchun mijozlar ro'yxati yopilgan")
         return redirect('dashboard')
 
     client = get_object_or_404(Client, pk=pk)
@@ -595,6 +595,10 @@ def client_detail(request, pk):
 
 @login_required
 def sales_list(request):
+    if request.user.role == 'warehouse':
+        messages.error(request, "Omborchi uchun sotuvlar bo'limi yopilgan")
+        return redirect('dashboard')
+
     status = request.GET.get('status', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
@@ -797,7 +801,11 @@ def warehouse_transaction(request):
 
 @login_required
 def transactions_history(request):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role == 'warehouse':
+        messages.error(request, "Omborchi uchun operatsiyalar tarixi yopilgan")
+        return redirect('dashboard')
+
+    if not user_has_role(request.user, 'director'):
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 

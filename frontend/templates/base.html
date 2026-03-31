@@ -60,17 +60,9 @@
                 {% if request.user.role == 'supplier' %}
                 <div class="nav-section">
                     <div class="nav-section-title">Yetkazib berish</div>
-                    <a href="{% url 'supplier_products' %}" class="nav-item {% if '/supplier/products' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
-                        <span>Mahsulot katalogi</span>
-                    </a>
-                    <a href="{% url 'supplier_supply_create' %}" class="nav-item {% if '/supplier/supplies/create' in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                        <span>Kirim qo'shish</span>
-                    </a>
-                    <a href="{% url 'supplier_supplies' %}" class="nav-item {% if '/supplier/supplies/' in request.path and '/create/' not in request.path %}active{% endif %}">
-                        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-                        <span>Mening ta'minotlarim</span>
+                    <a href="{% url 'supplier_deliveries' %}" class="nav-item {% if '/supplier/deliveries' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H1v13h2a3 3 0 0 0 6 0h6a3 3 0 0 0 6 0h2v-5l-3-4zM6 18.5A1.5 1.5 0 1 1 7.5 17 1.5 1.5 0 0 1 6 18.5zM15 15H9a3 3 0 0 0-6 0V6h12zm3.5 3.5A1.5 1.5 0 1 1 20 17a1.5 1.5 0 0 1-1.5 1.5zM17 12V10h2.5l1.5 2z"/></svg>
+                        <span>Yetkazib berishlar</span>
                     </a>
                 </div>
                 {% endif %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Yetkazib berish #{{ order.id }} - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Yetkazib berish #{{ order.id }}</h1>
+    <div class="page-actions">
+        <a href="{% url 'supplier_deliveries' %}" class="btn btn-secondary">Orqaga</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="detail-header">
+        <h2 class="detail-title">{{ order.full_name }}</h2>
+        <div class="detail-meta">
+            <span>Telefon: {{ order.phone }}</span>
+            <span>Telegram: @{{ order.profile.chat_username|default:'-' }}</span>
+            <span>
+                Holat:
+                <span class="badge badge-{% if order.status == 'confirmed' %}primary{% else %}success{% endif %}">
+                    {{ order.get_status_display }}
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h3 class="detail-section-title">Yetkaziladigan mahsulotlar</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mahsulot</th>
+                    <th>Narx</th>
+                    <th>Soni</th>
+                    <th>Jami</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.unit_price|floatformat:0 }} so'm</td>
+                    <td>{{ item.quantity }} {{ item.product.unit }}</td>
+                    <td>{{ item.total_price|floatformat:0 }} so'm</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align: right; font-weight: 600;">Jami:</td>
+                    <td style="font-weight: 700;">{{ order.total_amount|floatformat:0 }} so'm</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="detail-section">
+        <h3 class="detail-section-title">Mijoz ma'lumotlari</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Ism</span>
+                <span class="info-value">{{ order.full_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Telefon</span>
+                <span class="info-value">{{ order.phone }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Manzil / izoh</span>
+                <span class="info-value">{{ order.comment|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Sotuv</span>
+                <span class="info-value">
+                    {% if order.sale %}
+                    #{{ order.sale.id }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {% if order.status == 'confirmed' %}
+    <div class="detail-section">
+        <h3 class="detail-section-title">Amallar</h3>
+        <form method="post" action="{% url 'supplier_delivery_complete' order.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Mijozga yetkazildi</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -123,33 +123,59 @@ class CRMFlowTests(TestCase):
         response = self.client.get(reverse('products'))
         self.assertRedirects(response, reverse('dashboard'))
 
-    def test_supplier_can_open_supplier_catalog(self):
+    def test_supplier_cannot_open_telegram_orders_management(self):
         self.client.force_login(self.supplier_user)
-        response = self.client.get(reverse('supplier_products'))
+        response = self.client.get(reverse('telegram_orders'))
+        self.assertRedirects(response, reverse('dashboard'))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.product.name)
-
-    def test_supplier_can_create_supply_transaction(self):
-        self.client.force_login(self.supplier_user)
-        response = self.client.post(
-            reverse('supplier_supply_create'),
-            {
-                'product': str(self.product.id),
-                'quantity': '5',
-                'notes': 'Yangi partiya',
-            },
-            follow=True,
+    def test_supplier_can_view_confirmed_delivery_orders(self):
+        profile = TelegramProfile.objects.create(chat_id=45678, chat_username='delivery_user')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Yetkazish mijoz',
+            phone='+998901234500',
+            comment='Andijon shahar',
+            total_amount=self.product.price,
+            status='confirmed',
+        )
+        order.items.create(
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=self.product.price,
         )
 
-        self.product.refresh_from_db()
-        transaction = WarehouseTransaction.objects.get(created_by=self.supplier_user)
+        self.client.force_login(self.supplier_user)
+        response = self.client.get(reverse('supplier_deliveries'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(transaction.transaction_type, 'in')
-        self.assertEqual(transaction.quantity, 5)
-        self.assertEqual(self.product.stock, 15)
-        self.assertContains(response, self.product.name)
+        self.assertContains(response, order.full_name)
+        self.assertContains(response, 'Tasdiqlangan')
+
+    def test_supplier_can_complete_confirmed_delivery(self):
+        profile = TelegramProfile.objects.create(chat_id=45679, chat_username='delivery_done')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Mijoz Delivery',
+            phone='+998901234501',
+            comment='Margilan',
+            total_amount=self.product.price,
+            status='confirmed',
+        )
+        order.items.create(
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=self.product.price,
+        )
+
+        self.client.force_login(self.supplier_user)
+        response = self.client.post(reverse('supplier_delivery_complete', args=[order.id]), follow=True)
+        order.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(order.status, 'completed')
+        self.assertContains(response, 'mijozga yetkazildi', html=False)
 
     def test_director_sees_shift_buttons_for_seller_in_users_list(self):
         self.client.force_login(self.director)

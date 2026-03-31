@@ -95,6 +95,12 @@ def build_shift_report_context(shift):
     }
 
 
+def get_supplier_delivery_queryset(user):
+    return TelegramOrder.objects.filter(
+        status__in={'confirmed', 'completed'},
+    ).select_related('profile__user', 'sale').prefetch_related('items__product').order_by('-created_at')
+
+
 def issue_mini_app_token(profile):
     payload = {
         'profile_id': profile.id,
@@ -332,14 +338,11 @@ def dashboard(request):
             'product', 'created_by'
         ).order_by('-created_at')[:10]
     elif user_role == 'supplier':
-        supplier_transactions = WarehouseTransaction.objects.filter(
-            created_by=request.user,
-            transaction_type='in',
-        ).select_related('product').order_by('-created_at')
-        context['total_products'] = Product.objects.count()
-        context['delivery_count'] = supplier_transactions.count()
-        context['delivered_units'] = supplier_transactions.aggregate(total=Sum('quantity'))['total'] or 0
-        context['recent_transactions'] = supplier_transactions[:10]
+        supplier_orders = get_supplier_delivery_queryset(request.user)
+        context['pending_deliveries'] = supplier_orders.filter(status='confirmed').count()
+        context['completed_deliveries'] = supplier_orders.filter(status='completed').count()
+        context['delivery_revenue'] = supplier_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+        context['recent_orders'] = supplier_orders[:10]
 
     return render(request, 'dashboard.html', context)
 
@@ -1154,65 +1157,44 @@ def product_select(request):
 
 
 @login_required
-def supplier_products(request):
+def supplier_deliveries(request):
     if request.user.role != 'supplier':
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 
-    search = request.GET.get('search', '')
-    products = get_catalog_products_queryset()
-
-    if search:
-        products = products.filter(Q(name__icontains=search) | Q(description__icontains=search))
-
-    return render(request, 'supplier_products.html', {'products': products})
+    status = request.GET.get('status', '')
+    orders = get_supplier_delivery_queryset(request.user)
+    if status:
+        orders = orders.filter(status=status)
+    return render(request, 'supplier_deliveries.html', {'orders': orders})
 
 
 @login_required
-def supplier_supply_create(request):
+def supplier_delivery_detail(request, pk):
+    if request.user.role != 'supplier':
+        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
+        return redirect('dashboard')
+
+    order = get_object_or_404(get_supplier_delivery_queryset(request.user), pk=pk)
+    return render(request, 'supplier_delivery_detail.html', {'order': order})
+
+
+@login_required
+@require_POST
+def supplier_delivery_complete(request, pk):
     if request.user.role != 'supplier':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
-    if request.method == 'POST':
-        product_id = request.POST.get('product')
-        quantity = int(request.POST.get('quantity', 0))
-        notes = request.POST.get('notes', '')
+    order = get_object_or_404(get_supplier_delivery_queryset(request.user), pk=pk)
+    if order.status != 'confirmed':
+        messages.info(request, "Bu buyurtma allaqachon yetkazib bo'lingan")
+        return redirect('supplier_delivery_detail', pk=pk)
 
-        if product_id and quantity > 0:
-            with transaction.atomic():
-                product = Product.objects.select_for_update().get(pk=product_id)
-                product.stock += quantity
-                product.save(update_fields=['stock'])
-
-                WarehouseTransaction.objects.create(
-                    product=product,
-                    transaction_type='in',
-                    quantity=quantity,
-                    notes=notes,
-                    created_by=request.user,
-                )
-
-            messages.success(request, f"{product.name} uchun {quantity} {product.unit} kirim qilindi")
-            return redirect('supplier_supplies')
-
-        messages.error(request, "Kirim uchun to'g'ri ma'lumot kiriting")
-
-    products = get_catalog_products_queryset()
-    return render(request, 'supplier_supply_form.html', {'products': products})
-
-
-@login_required
-def supplier_supplies(request):
-    if request.user.role != 'supplier':
-        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
-        return redirect('dashboard')
-
-    transactions = WarehouseTransaction.objects.filter(
-        created_by=request.user,
-        transaction_type='in',
-    ).select_related('product').order_by('-created_at')
-    return render(request, 'supplier_supplies.html', {'transactions': transactions})
+    order.status = 'completed'
+    order.save(update_fields=['status'])
+    messages.success(request, "Buyurtma mijozga yetkazildi")
+    return redirect('supplier_delivery_detail', pk=pk)
 
 
 @require_GET

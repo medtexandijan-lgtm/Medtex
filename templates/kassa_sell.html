@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} sotish - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">{{ product.name }}</h1>
+    <div class="page-actions">
+        <a href="{% url 'kassa' %}" class="btn btn-secondary">Orqaga</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="card" style="max-width: 400px; margin: 0 auto; text-align: center;">
+        <h3 style="margin-bottom: 8px;">{{ product.name }}</h3>
+        <p style="color: var(--gray); margin-bottom: 16px;">{{ product.category.name }}</p>
+        
+        <p style="font-size: 32px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
+            {{ product.price|floatformat:0 }} so'm
+        </p>
+        
+        <p style="margin-bottom: 24px;">
+            <span class="badge {% if product.stock > 0 %}badge-success{% else %}badge-danger{% endif %}">
+                Omborda: {{ product.stock }} {{ product.unit }}
+            </span>
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Soni</label>
+                <input type="number" name="quantity" class="form-control" value="1" min="1" max="{{ product.stock }}" required style="text-align: center; font-size: 24px; padding: 16px;">
+            </div>
+            
+            <div style="background: var(--gray-100); padding: 16px; border-radius: var(--radius); margin: 16px 0;">
+                <p style="font-size: 14px; color: var(--gray); margin-bottom: 4px;">Jami summa:</p>
+                <p style="font-size: 28px; font-weight: 700; color: var(--dark);">{{ product.price|floatformat:0 }} so'm</p>
+            </div>
+            
+            <button type="submit" class="btn btn-success btn-block btn-lg">
+                Sotuvni yakunlash
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.querySelector('input[name="quantity"]').addEventListener('input', function() {
+    let qty = parseInt(this.value) || 1;
+    if (qty < 1) qty = 1;
+    if (qty > {{ product.stock }}) qty = {{ product.stock }};
+    this.value = qty;
+    
+    const total = qty * {{ product.price }};
+    const totalEl = this.closest('form').querySelector('.btn-lg').previousElementSibling.querySelector('p:last-child');
+    totalEl.textContent = total.toLocaleString() + ' so\'m';
+});
+</script>
+{% endblock %}

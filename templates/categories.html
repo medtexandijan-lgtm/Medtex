@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Kategoriyalar - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Kategoriyalar</h1>
+    <div class="page-actions">
+        <a href="{% url 'category_create' %}" class="btn btn-primary">Kategoriya qo'shish</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Kategoriya nomi</th>
+                    <th>Mahsulotlar soni</th>
+                    <th>Yaratilgan</th>
+                    <th>Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr>
+                    <td>{{ cat.name }}</td>
+                    <td>{{ cat.product_count }}</td>
+                    <td>{{ cat.created_at|date:"d.m.Y" }}</td>
+                    <td>
+                        <div class="actions">
+                            <a href="{% url 'category_edit' cat.id %}" class="action-btn edit" title="Tahrirlash">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            </a>
+                            <a href="{% url 'category_delete' cat.id %}" class="action-btn delete" title="O'chirish" onclick="return confirm('Rostdan ham o\'chirishni xohlayapsizmi?')">
+                                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="empty-state">
+                        <h3>Kategoriyalar yo'q</h3>
+                        <p>Hozircha kategoriyalar ro'yxati bo'sh</p>
+                        <a href="{% url 'category_create' %}" class="btn btn-primary">Kategoriya qo'shish</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

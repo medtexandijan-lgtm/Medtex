@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Sotuv #{{ sale.id }} - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Sotuv #{{ sale.id }}</h1>
+    <div class="page-actions">
+        <a href="{% url 'sales' %}" class="btn btn-secondary">Orqaga</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="detail-header">
+        <h2 class="detail-title">Sotuv tafsilotlari</h2>
+        <div class="detail-meta">
+            <span>Mijoz: {{ sale.client.name|default:"Walk-in mijoz" }}</span>
+            <span>Sotuvchi: {{ sale.seller.get_full_name }}</span>
+            <span>Holat: <span class="badge badge-{% if sale.status == 'completed' %}success{% elif sale.status == 'pending' %}warning{% elif sale.status == 'cancelled' %}danger{% else %}info{% endif %}">{{ sale.get_status_display }}</span></span>
+        </div>
+    </div>
+    
+    <div class="detail-section">
+        <h3 class="detail-section-title">Sotuv elementlari</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mahsulot</th>
+                    <th>Narxi</th>
+                    <th>Soni</th>
+                    <th>Jami</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.unit_price|floatformat:0 }} so'm</td>
+                    <td>{{ item.quantity }} {{ item.product.unit }}</td>
+                    <td>{{ item.total_price|floatformat:0 }} so'm</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align: right; font-weight: 600;">Jami:</td>
+                    <td style="font-weight: 700; font-size: 18px;">{{ sale.total_amount|floatformat:0 }} so'm</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    {% if request.user.role == 'director' %}
+    <div class="detail-section">
+        <h3 class="detail-section-title">Holatni o'zgartirish</h3>
+        <form method="post" action="{% url 'sale_update_status' sale.id %}">
+            {% csrf_token %}
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <select name="status" class="form-control" style="max-width: 200px;">
+                    <option value="pending" {% if sale.status == 'pending' %}selected{% endif %}>Kutilmoqda</option>
+                    <option value="completed" {% if sale.status == 'completed' %}selected{% endif %}>Tugallangan</option>
+                    <option value="cancelled" {% if sale.status == 'cancelled' %}selected{% endif %}>Bekor qilingan</option>
+                    <option value="returned" {% if sale.status == 'returned' %}selected{% endif %}>Qaytarilgan</option>
+                </select>
+                <button type="submit" class="btn btn-primary">Yangilash</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

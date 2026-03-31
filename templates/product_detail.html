@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">{{ product.name }}</h1>
+    <div class="page-actions">
+        <a href="{% url 'product_edit' product.id %}" class="btn btn-primary">Tahrirlash</a>
+        <a href="{% url 'products' %}" class="btn btn-secondary">Orqaga</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="detail-header">
+        <h2 class="detail-title">{{ product.name }}</h2>
+        <div class="detail-meta">
+            <span>Kategoriya: {{ product.category.name }}</span>
+            <span>Narxi: {{ product.price|floatformat:0 }} so'm</span>
+            <span>Omborda: {{ product.stock }} {{ product.unit }}</span>
+        </div>
+    </div>
+    
+    <div class="detail-section">
+        <h3 class="detail-section-title">Mahsulot ma'lumotlari</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Mahsulot nomi</span>
+                <span class="info-value">{{ product.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Kategoriya</span>
+                <span class="info-value">{{ product.category.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Narxi</span>
+                <span class="info-value">{{ product.price|floatformat:0 }} so'm</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Ombordagi soni</span>
+                <span class="info-value">{{ product.stock }} {{ product.unit }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">O'lchov birligi</span>
+                <span class="info-value">{{ product.unit }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Yaratilgan</span>
+                <span class="info-value">{{ product.created_at|date:"d.m.Y H:i" }}</span>
+            </div>
+        </div>
+        {% if product.description %}
+        <div class="info-item" style="margin-top: 16px;">
+            <span class="info-label">Tavsif</span>
+            <span class="info-value">{{ product.description }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="detail-section">
+        <h3 class="detail-section-title">Oxirgi operatsiyalar</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Amal turi</th>
+                    <th>Soni</th>
+                    <th>Kim</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>
+                        <span class="badge badge-{% if t.transaction_type == 'in' %}success{% else %}danger{% endif %}">
+                            {{ t.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td>{{ t.quantity }}</td>
+                    <td>{{ t.created_by.get_full_name }}</td>
+                    <td>{{ t.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="empty-state">
+                        <p>Operatsiyalar yo'q</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

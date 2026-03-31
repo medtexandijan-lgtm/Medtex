@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if action == 'create' %}Kategoriya qo'shish{% else %}Kategoriya tahrirlash{% endif %} - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">{% if action == 'create' %}Kategoriya qo'shish{% else %}Kategoriya tahrirlash{% endif %}</h1>
+</div>
+
+<div class="page-content">
+    <div class="card" style="max-width: 500px; margin: 0 auto;">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Saqlash</button>
+                <a href="{% url 'categories' %}" class="btn btn-secondary">Bekor qilish</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

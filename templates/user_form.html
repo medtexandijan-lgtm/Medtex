@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if action == 'create' %}Foydalanuvchi qo'shish{% else %}Foydalanuvchi tahrirlash{% endif %} - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">{% if action == 'create' %}Foydalanuvchi qo'shish{% else %}Foydalanuvchi tahrirlash{% endif %}</h1>
+</div>
+
+<div class="page-content">
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            {% if action == 'edit' %}
+            <div class="form-group">
+                <label class="form-label">Yangi parol (o'zgartirmaslik uchun bo'sh qoldiring)</label>
+                <input type="password" name="password" class="form-control" placeholder="Yangi parol">
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label class="form-label">Rol</label>
+                <select name="role" class="form-control" required>
+                    <option value="">-- Rolni tanlang --</option>
+                    <option value="director" {% if user.role == 'director' %}selected{% endif %}>Direktor</option>
+                    <option value="seller" {% if user.role == 'seller' %}selected{% endif %}>Sotuvchi</option>
+                    <option value="warehouse" {% if user.role == 'warehouse' %}selected{% endif %}>Omborchi</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Saqlash</button>
+                <a href="{% url 'users' %}" class="btn btn-secondary">Bekor qilish</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

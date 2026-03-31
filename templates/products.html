@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Mahsulotlar - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Mahsulotlar</h1>
+    <div class="page-actions">
+        <a href="{% url 'product_create' %}" class="btn btn-primary">Mahsulot qo'shish</a>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <form method="get" style="display: flex; gap: 16px; flex: 1;">
+        <div class="search-box" style="flex: 1; max-width: 300px;">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" name="search" class="form-control" placeholder="Qidirish..." value="{{ request.GET.search|default:'' }}">
+        </div>
+        <div class="filter-group">
+            <select name="category" class="form-control">
+                <option value="">Barcha kategoriyalar</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">Filtrlash</button>
+    </form>
+</div>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Mahsulot nomi</th>
+                <th>Kategoriya</th>
+                <th>Narxi</th>
+                <th>Qoldiq</th>
+                <th>Amallar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>
+                    <a href="{% url 'product_detail' product.id %}">{{ product.name }}</a>
+                </td>
+                <td>{{ product.category.name }}</td>
+                <td>{{ product.price|floatformat:0 }} so'm</td>
+                <td>
+                    <span class="badge {% if product.stock < 10 %}badge-danger{% else %}badge-success{% endif %}">
+                        {{ product.stock }} {{ product.unit }}
+                    </span>
+                </td>
+                <td>
+                    <div class="actions">
+                        <a href="{% url 'product_edit' product.id %}" class="action-btn edit" title="Tahrirlash">
+                            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </a>
+                        <a href="{% url 'product_delete' product.id %}" class="action-btn delete" title="O'chirish" onclick="return confirm('Rostdan ham o\'chirishni xohlayapsizmi?')">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty-state">
+                    <h3>Mahsulotlar topilmadi</h3>
+                    <p>Hozircha mahsulotlar ro'yxati bo'sh</p>
+                    <a href="{% url 'product_create' %}" class="btn btn-primary">Mahsulot qo'shish</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

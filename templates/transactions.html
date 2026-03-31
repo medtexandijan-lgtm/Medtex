@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Operatsiyalar tarixi - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Operatsiyalar tarixi</h1>
+    <div class="page-actions">
+        <a href="{% url 'warehouse_transaction' %}" class="btn btn-primary">Yangi operatsiya</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mahsulot</th>
+                    <th>Tur</th>
+                    <th>Soni</th>
+                    <th>Izoh</th>
+                    <th>Kim</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>{{ t.product.name }}</td>
+                    <td>
+                        <span class="badge badge-{% if t.transaction_type == 'in' %}success{% else %}danger{% endif %}">
+                            {{ t.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td>{{ t.quantity }} {{ t.product.unit }}</td>
+                    <td>{{ t.notes|default:'-' }}</td>
+                    <td>{{ t.created_by.get_full_name }}</td>
+                    <td>{{ t.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <h3>Operatsiyalar yo'q</h3>
+                        <p>Hozircha ombor operatsiyalari ro'yxati bo'sh</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

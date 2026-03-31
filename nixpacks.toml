@@ -11,4 +11,4 @@ cmds = [
 ]
 
 [start]
-cmd = "gunicorn --chdir backend medical_crm.wsgi --bind 0.0.0.0:$PORT --log-file -"
+cmd = "python manage.py migrate --noinput && gunicorn --chdir backend medical_crm.wsgi --bind 0.0.0.0:$PORT --log-file -"

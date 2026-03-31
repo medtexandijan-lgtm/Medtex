@@ -2,14 +2,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import RedirectView
 from main import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('main.api_urls')),
     path('login/', views.login_view, name='login'),
-    path('', RedirectView.as_view(pattern_name='api_root', permanent=False)),
+    path('', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('shift/start/', views.shift_start, name='shift_start'),

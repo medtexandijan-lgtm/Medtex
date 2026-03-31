@@ -89,6 +89,13 @@
             margin-top: 16px;
         }
 
+        .mini-product-out {
+            margin-top: 12px;
+            color: var(--danger);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
         .mini-qty {
             width: 90px;
             padding: 12px;
@@ -283,6 +290,7 @@
             products.forEach((product) => {
                 const card = document.createElement('div');
                 card.className = 'mini-product';
+                const isAvailable = Number(product.stock) > 0;
                 card.innerHTML = `
                     <div class="mini-product-head">
                         <div>
@@ -294,15 +302,19 @@
                         </div>
                         <div class="mini-price">${formatPrice(product.price)} so'm</div>
                     </div>
+                    ${isAvailable ? '' : '<div class="mini-product-out">Hozircha tugagan</div>'}
                     <div class="mini-product-actions">
-                        <input class="mini-qty" type="number" min="1" max="${product.stock}" value="1">
-                        <button class="btn btn-primary">Savatga qo'shish</button>
+                        <input class="mini-qty" type="number" min="1" max="${Math.max(Number(product.stock), 1)}" value="1" ${isAvailable ? '' : 'disabled'}>
+                        <button class="btn btn-primary" ${isAvailable ? '' : 'disabled'}>${isAvailable ? "Savatga qo'shish" : 'Mavjud emas'}</button>
                     </div>
                 `;
 
                 const qtyInput = card.querySelector('.mini-qty');
                 const button = card.querySelector('.btn');
                 button.addEventListener('click', () => {
+                    if (!isAvailable) {
+                        return;
+                    }
                     const quantity = Number(qtyInput.value || 1);
                     if (!quantity || quantity < 1) {
                         return;

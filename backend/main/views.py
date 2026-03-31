@@ -49,6 +49,28 @@ def display_name(user):
     return full_name or user.username
 
 
+def get_catalog_products_queryset():
+    return Product.objects.select_related('category').order_by('name')
+
+
+def serialize_catalog_products(queryset=None):
+    queryset = queryset or get_catalog_products_queryset()
+    products = list(
+        queryset.values(
+            'id',
+            'name',
+            'price',
+            'stock',
+            'unit',
+            'category__name',
+            'description',
+        )
+    )
+    for product in products:
+        product['is_available'] = product['stock'] > 0
+    return products
+
+
 def get_active_shift(user):
     if not user.is_authenticated or user.role != 'seller':
         return None
@@ -450,7 +472,7 @@ def products_list(request):
     search = request.GET.get('search', '')
     category_id = request.GET.get('category', '')
 
-    products = Product.objects.select_related('category')
+    products = get_catalog_products_queryset()
 
     if search:
         products = products.filter(Q(name__icontains=search) | Q(description__icontains=search))
@@ -1108,8 +1130,10 @@ def get_product_price(request):
 
 @login_required
 def product_select(request):
-    products = Product.objects.filter(stock__gt=0).values('id', 'name', 'price', 'stock', 'unit')
-    return JsonResponse(list(products), safe=False)
+    products = serialize_catalog_products(
+        get_catalog_products_queryset().only('id', 'name', 'price', 'stock', 'unit', 'category', 'description')
+    )
+    return JsonResponse(products, safe=False)
 
 
 @require_GET
@@ -1149,11 +1173,7 @@ def mini_app_auth(request):
             is_active=True,
         )
 
-    products = list(
-        Product.objects.filter(stock__gt=0).select_related('category').values(
-            'id', 'name', 'price', 'stock', 'unit', 'category__name', 'description'
-        )
-    )
+    products = serialize_catalog_products()
     token = issue_mini_app_token(profile)
     return JsonResponse(
         {

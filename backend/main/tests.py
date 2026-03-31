@@ -54,6 +54,13 @@ class CRMFlowTests(TestCase):
             stock=10,
             unit='dona',
         )
+        self.out_of_stock_product = Product.objects.create(
+            name='Holter monitor',
+            category=self.category,
+            price=2500000,
+            stock=0,
+            unit='dona',
+        )
 
     def test_clients_page_is_available_for_director(self):
         self.client.force_login(self.director)
@@ -320,7 +327,11 @@ class CRMFlowTests(TestCase):
         payload = response.json()
         self.assertTrue(payload['ok'])
         self.assertTrue(payload['token'])
-        self.assertEqual(len(payload['products']), 1)
+        self.assertEqual(len(payload['products']), 2)
+        self.assertEqual(payload['products'][0]['name'], 'EKG apparati')
+        self.assertTrue(payload['products'][0]['is_available'])
+        self.assertEqual(payload['products'][1]['name'], 'Holter monitor')
+        self.assertFalse(payload['products'][1]['is_available'])
         self.assertTrue(TelegramProfile.objects.filter(chat_id=123456).exists())
 
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')

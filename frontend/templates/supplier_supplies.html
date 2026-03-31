@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Mening ta'minotlarim - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Mening ta'minotlarim</h1>
+    <div class="page-actions">
+        <a href="{% url 'supplier_supply_create' %}" class="btn btn-primary">Yangi kirim</a>
+    </div>
+</div>
+
+<div class="page-content">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mahsulot</th>
+                    <th>Soni</th>
+                    <th>Izoh</th>
+                    <th>Sana</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>{{ t.product.name }}</td>
+                    <td>{{ t.quantity }} {{ t.product.unit }}</td>
+                    <td>{{ t.notes|default:"-" }}</td>
+                    <td>{{ t.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="empty-state">
+                        <h3>Ta'minotlar yo'q</h3>
+                        <p>Siz hali kirim kiritmagansiz</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

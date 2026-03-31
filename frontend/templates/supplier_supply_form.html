@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Kirim qo'shish - Medical CRM{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+    <h1 class="page-title">Kirim qo'shish</h1>
+</div>
+
+<div class="page-content">
+    <div class="card" style="max-width: 560px; margin: 0 auto;">
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Mahsulot</label>
+                <select name="product" class="form-control" required>
+                    <option value="">-- Mahsulotni tanlang --</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">{{ product.name }} ({{ product.stock }} {{ product.unit }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Kiritiladigan son</label>
+                <input type="number" name="quantity" class="form-control" min="1" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Izoh</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Partiya, yetkazish sanasi yoki eslatma"></textarea>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Kirimni saqlash</button>
+                <a href="{% url 'supplier_supplies' %}" class="btn btn-secondary">Bekor qilish</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

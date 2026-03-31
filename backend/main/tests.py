@@ -103,6 +103,54 @@ class CRMFlowTests(TestCase):
         response = self.client.get(reverse('transactions'))
         self.assertRedirects(response, reverse('dashboard'))
 
+    def test_supplier_cannot_open_clients_page(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.get(reverse('clients'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_supplier_cannot_open_sales_page(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.get(reverse('sales'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_supplier_cannot_open_categories_page(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.get(reverse('categories'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_supplier_cannot_open_generic_products_page(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.get(reverse('products'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_supplier_can_open_supplier_catalog(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.get(reverse('supplier_products'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.product.name)
+
+    def test_supplier_can_create_supply_transaction(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.post(
+            reverse('supplier_supply_create'),
+            {
+                'product': str(self.product.id),
+                'quantity': '5',
+                'notes': 'Yangi partiya',
+            },
+            follow=True,
+        )
+
+        self.product.refresh_from_db()
+        transaction = WarehouseTransaction.objects.get(created_by=self.supplier_user)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(transaction.transaction_type, 'in')
+        self.assertEqual(transaction.quantity, 5)
+        self.assertEqual(self.product.stock, 15)
+        self.assertContains(response, self.product.name)
+
     def test_director_sees_shift_buttons_for_seller_in_users_list(self):
         self.client.force_login(self.director)
         response = self.client.get(reverse('users'))

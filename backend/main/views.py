@@ -331,6 +331,15 @@ def dashboard(request):
         context['recent_transactions'] = WarehouseTransaction.objects.select_related(
             'product', 'created_by'
         ).order_by('-created_at')[:10]
+    elif user_role == 'supplier':
+        supplier_transactions = WarehouseTransaction.objects.filter(
+            created_by=request.user,
+            transaction_type='in',
+        ).select_related('product').order_by('-created_at')
+        context['total_products'] = Product.objects.count()
+        context['delivery_count'] = supplier_transactions.count()
+        context['delivered_units'] = supplier_transactions.aggregate(total=Sum('quantity'))['total'] or 0
+        context['recent_transactions'] = supplier_transactions[:10]
 
     return render(request, 'dashboard.html', context)
 
@@ -408,7 +417,7 @@ def user_delete(request, pk):
 
 @login_required
 def categories_list(request):
-    if request.user.role in {'seller', 'warehouse'}:
+    if request.user.role in {'seller', 'warehouse', 'supplier'}:
         messages.error(request, "Siz uchun kategoriyalar bo'limi yopilgan")
         return redirect('dashboard')
 
@@ -465,8 +474,8 @@ def category_delete(request, pk):
 
 @login_required
 def products_list(request):
-    if request.user.role == 'seller':
-        messages.error(request, "Sotuvchi uchun mahsulotlar bo'limi yopilgan")
+    if request.user.role in {'seller', 'supplier'}:
+        messages.error(request, "Siz uchun mahsulotlar bo'limi yopilgan")
         return redirect('dashboard')
 
     search = request.GET.get('search', '')
@@ -532,8 +541,8 @@ def product_delete(request, pk):
 
 @login_required
 def product_detail(request, pk):
-    if request.user.role == 'seller':
-        messages.error(request, "Sotuvchi uchun mahsulotlar bo'limi yopilgan")
+    if request.user.role in {'seller', 'supplier'}:
+        messages.error(request, "Siz uchun mahsulotlar bo'limi yopilgan")
         return redirect('dashboard')
 
     product = get_object_or_404(Product.objects.select_related('category'), pk=pk)
@@ -543,7 +552,7 @@ def product_detail(request, pk):
 
 @login_required
 def clients_list(request):
-    if request.user.role in {'seller', 'warehouse'}:
+    if request.user.role in {'seller', 'warehouse', 'supplier'}:
         messages.error(request, "Siz uchun mijozlar ro'yxati yopilgan")
         return redirect('dashboard')
 
@@ -605,7 +614,7 @@ def client_delete(request, pk):
 
 @login_required
 def client_detail(request, pk):
-    if request.user.role in {'seller', 'warehouse'}:
+    if request.user.role in {'seller', 'warehouse', 'supplier'}:
         messages.error(request, "Siz uchun mijozlar ro'yxati yopilgan")
         return redirect('dashboard')
 
@@ -617,8 +626,8 @@ def client_detail(request, pk):
 
 @login_required
 def sales_list(request):
-    if request.user.role == 'warehouse':
-        messages.error(request, "Omborchi uchun sotuvlar bo'limi yopilgan")
+    if request.user.role in {'warehouse', 'supplier'}:
+        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 
     status = request.GET.get('status', '')
@@ -745,6 +754,10 @@ def sale_create(request):
 
 @login_required
 def sale_detail(request, pk):
+    if request.user.role == 'supplier':
+        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
+        return redirect('dashboard')
+
     sale = get_object_or_404(Sale.objects.select_related('client', 'seller'), pk=pk)
     items = sale.items.select_related('product')
     return render(request, 'sale_detail.html', {'sale': sale, 'items': items})
@@ -752,6 +765,10 @@ def sale_detail(request, pk):
 
 @login_required
 def sale_update_status(request, pk):
+    if request.user.role == 'supplier':
+        messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
+        return redirect('dashboard')
+
     if request.method == 'POST':
         sale = get_object_or_404(Sale, pk=pk)
         new_status = request.POST.get('status')
@@ -1134,6 +1151,68 @@ def product_select(request):
         get_catalog_products_queryset().only('id', 'name', 'price', 'stock', 'unit', 'category', 'description')
     )
     return JsonResponse(products, safe=False)
+
+
+@login_required
+def supplier_products(request):
+    if request.user.role != 'supplier':
+        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
+        return redirect('dashboard')
+
+    search = request.GET.get('search', '')
+    products = get_catalog_products_queryset()
+
+    if search:
+        products = products.filter(Q(name__icontains=search) | Q(description__icontains=search))
+
+    return render(request, 'supplier_products.html', {'products': products})
+
+
+@login_required
+def supplier_supply_create(request):
+    if request.user.role != 'supplier':
+        messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        product_id = request.POST.get('product')
+        quantity = int(request.POST.get('quantity', 0))
+        notes = request.POST.get('notes', '')
+
+        if product_id and quantity > 0:
+            with transaction.atomic():
+                product = Product.objects.select_for_update().get(pk=product_id)
+                product.stock += quantity
+                product.save(update_fields=['stock'])
+
+                WarehouseTransaction.objects.create(
+                    product=product,
+                    transaction_type='in',
+                    quantity=quantity,
+                    notes=notes,
+                    created_by=request.user,
+                )
+
+            messages.success(request, f"{product.name} uchun {quantity} {product.unit} kirim qilindi")
+            return redirect('supplier_supplies')
+
+        messages.error(request, "Kirim uchun to'g'ri ma'lumot kiriting")
+
+    products = get_catalog_products_queryset()
+    return render(request, 'supplier_supply_form.html', {'products': products})
+
+
+@login_required
+def supplier_supplies(request):
+    if request.user.role != 'supplier':
+        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
+        return redirect('dashboard')
+
+    transactions = WarehouseTransaction.objects.filter(
+        created_by=request.user,
+        transaction_type='in',
+    ).select_related('product').order_by('-created_at')
+    return render(request, 'supplier_supplies.html', {'transactions': transactions})
 
 
 @require_GET

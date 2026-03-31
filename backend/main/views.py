@@ -1170,6 +1170,15 @@ def supplier_deliveries(request):
 
 
 @login_required
+def supplier_legacy_redirect(request):
+    if request.user.role != 'supplier':
+        messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
+        return redirect('dashboard')
+
+    return redirect('supplier_deliveries')
+
+
+@login_required
 def supplier_delivery_detail(request, pk):
     if request.user.role != 'supplier':
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")

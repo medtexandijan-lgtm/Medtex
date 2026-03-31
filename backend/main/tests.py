@@ -152,6 +152,11 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, order.full_name)
         self.assertContains(response, 'Tasdiqlangan')
 
+    def test_supplier_legacy_supply_url_redirects_to_deliveries(self):
+        self.client.force_login(self.supplier_user)
+        response = self.client.get('/supplier/supplies/')
+        self.assertRedirects(response, reverse('supplier_deliveries'))
+
     def test_supplier_can_complete_confirmed_delivery(self):
         profile = TelegramProfile.objects.create(chat_id=45679, chat_username='delivery_done')
         order = TelegramOrder.objects.create(

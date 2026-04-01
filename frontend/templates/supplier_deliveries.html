@@ -33,6 +33,7 @@
                 <th>Jami</th>
                 <th>Holat</th>
                 <th>Sana</th>
+                <th>Amallar</th>
             </tr>
         </thead>
         <tbody>
@@ -49,10 +50,27 @@
                     </span>
                 </td>
                 <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <a href="{% url 'supplier_delivery_detail' order.id %}" class="btn btn-secondary btn-sm">Ko'rish</a>
+                        {% if order.status == 'confirmed' %}
+                        <form method="post" action="{% url 'supplier_delivery_complete' order.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-sm">Qabul qilish</button>
+                        </form>
+                        {% endif %}
+                        {% if order.status == 'delivering' %}
+                        <form method="post" action="{% url 'supplier_delivery_complete' order.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">Yetkazildi</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" class="empty-state">
+                <td colspan="8" class="empty-state">
                     <h3>Yetkazib berishlar yo'q</h3>
                     <p>Tasdiqlangan buyurtmalar shu yerda ko'rinadi.</p>
                 </td>

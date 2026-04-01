@@ -72,13 +72,8 @@ def get_or_create_profile(chat):
 def build_help_text():
     return (
         "Medical CRM xizmat botiga xush kelibsiz.\n"
-        "Bot orqali mahsulotlarni ko'rish, buyurtma berish va buyurtma holatini kuzatish mumkin.\n\n"
-        "Buyruqlar:\n"
-        "/start - asosiy menyu\n"
-        "/help - yordam\n"
-        "/link KOD - Telegram profilingizni CRM user bilan bog'lash\n"
-        "/me - bog'langan userni ko'rsatish\n"
-        "/stats - rolingizga mos qisqa statistika"
+        "Bot orqali mahsulotlarni ko'rish, buyurtma berish va buyurtma holatini kuzatish mumkin.\n"
+        "Pastdagi tugma orqali mini ilovani ochib buyurtma berishingiz mumkin."
     )
 
 

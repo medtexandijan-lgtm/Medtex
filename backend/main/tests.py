@@ -62,11 +62,10 @@ class CRMFlowTests(TestCase):
             unit='dona',
         )
 
-    def test_clients_page_is_available_for_director(self):
+    def test_director_cannot_open_clients_page(self):
         self.client.force_login(self.director)
         response = self.client.get(reverse('clients'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Mijozlar')
+        self.assertRedirects(response, reverse('dashboard'))
 
     def test_seller_cannot_open_clients_page(self):
         self.client.force_login(self.seller)
@@ -262,12 +261,42 @@ class CRMFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Yetkazib beruvchi')
 
-    def test_director_sees_sales_and_transactions_links(self):
+    def test_director_dashboard_focuses_on_employee_control(self):
         self.client.force_login(self.director)
         response = self.client.get(reverse('dashboard'))
 
-        self.assertContains(response, reverse('sales'))
-        self.assertContains(response, reverse('transactions'))
+        self.assertContains(response, 'Xodimlar holati')
+        self.assertContains(response, reverse('users'))
+        self.assertNotContains(response, reverse('sales'))
+        self.assertNotContains(response, reverse('warehouse'))
+
+    def test_director_cannot_create_sale(self):
+        self.client.force_login(self.director)
+        response = self.client.post(reverse('sale_create'), {}, follow=True)
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_director_cannot_manage_warehouse(self):
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('warehouse'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_director_cannot_manage_products(self):
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('products'))
+        self.assertRedirects(response, reverse('dashboard'))
+
+    def test_director_cannot_accept_telegram_orders(self):
+        profile = TelegramProfile.objects.create(chat_id=223344, chat_username='director_blocked')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Blocked order',
+            phone='+998901234560',
+            total_amount=self.product.price,
+            status='new',
+        )
+        self.client.force_login(self.director)
+        response = self.client.post(reverse('telegram_order_update_status', args=[order.id]), {'status': 'confirmed'}, follow=True)
+        self.assertRedirects(response, reverse('dashboard'))
 
     def test_seller_cannot_create_sale_without_open_shift(self):
         self.client.force_login(self.seller)
@@ -574,7 +603,8 @@ class CRMFlowTests(TestCase):
             total_price=self.product.price * 2,
         )
 
-        self.client.force_login(self.director)
+        SellerShift.objects.create(seller=self.seller)
+        self.client.force_login(self.seller)
         response = self.client.post(
             reverse('telegram_order_update_status', args=[order.id]),
             {'status': 'confirmed'},
@@ -609,7 +639,7 @@ class CRMFlowTests(TestCase):
         )
         sale = Sale.objects.create(
             client=self.client_obj,
-            seller=self.director,
+            seller=self.seller,
             total_amount=3000000,
             status='completed',
         )
@@ -624,7 +654,7 @@ class CRMFlowTests(TestCase):
         self.product.stock = 8
         self.product.save(update_fields=['stock'])
 
-        self.client.force_login(self.director)
+        self.client.force_login(self.seller)
         self.client.post(
             reverse('telegram_order_update_status', args=[order.id]),
             {'status': 'cancelled'},

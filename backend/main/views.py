@@ -315,14 +315,34 @@ def dashboard(request):
     today = timezone.now().date()
 
     if user_role == 'director':
-        context['total_products'] = Product.objects.count()
-        context['total_clients'] = Client.objects.count()
-        context['total_sales'] = Sale.objects.count()
-        context['total_revenue'] = Sale.objects.filter(status='completed').aggregate(
-            Sum('total_amount')
-        )['total_amount__sum'] or 0
-        context['recent_sales'] = Sale.objects.select_related('client', 'seller').order_by('-created_at')[:10]
-        context['top_products'] = Product.objects.order_by('-stock')[:5]
+        open_shift_count = SellerShift.objects.filter(ended_at__isnull=True).count()
+        new_orders_count = TelegramOrder.objects.filter(status='new').count()
+        active_deliveries_count = TelegramOrder.objects.filter(status__in={'confirmed', 'delivering'}).count()
+        users = User.objects.exclude(role='director')
+        active_shift_map = {
+            shift.seller_id: shift
+            for shift in SellerShift.objects.filter(ended_at__isnull=True).select_related('seller')
+        }
+        employee_rows = []
+        for employee in users.order_by('role', 'first_name', 'username'):
+            employee_rows.append(
+                {
+                    'id': employee.id,
+                    'name': display_name(employee),
+                    'username': employee.username,
+                    'role_display': employee.get_role_display(),
+                    'is_active': employee.is_active,
+                    'active_shift': active_shift_map.get(employee.id) if employee.role == 'seller' else None,
+                }
+            )
+
+        context['seller_count'] = users.filter(role='seller').count()
+        context['warehouse_count'] = users.filter(role='warehouse').count()
+        context['supplier_count'] = users.filter(role='supplier').count()
+        context['open_shift_count'] = open_shift_count
+        context['new_orders_count'] = new_orders_count
+        context['active_deliveries_count'] = active_deliveries_count
+        context['employee_rows'] = employee_rows
     elif user_role == 'seller':
         active_shift = get_active_shift(request.user)
         last_closed_shift = SellerShift.objects.filter(
@@ -429,7 +449,7 @@ def user_delete(request, pk):
 
 @login_required
 def categories_list(request):
-    if request.user.role in {'seller', 'warehouse', 'supplier'}:
+    if request.user.role in {'director', 'seller', 'warehouse', 'supplier'}:
         messages.error(request, "Siz uchun kategoriyalar bo'limi yopilgan")
         return redirect('dashboard')
 
@@ -439,7 +459,7 @@ def categories_list(request):
 
 @login_required
 def category_create(request):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -456,7 +476,7 @@ def category_create(request):
 
 @login_required
 def category_edit(request, pk):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -474,7 +494,7 @@ def category_edit(request, pk):
 
 @login_required
 def category_delete(request, pk):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -486,7 +506,7 @@ def category_delete(request, pk):
 
 @login_required
 def products_list(request):
-    if request.user.role in {'seller', 'supplier'}:
+    if request.user.role in {'director', 'seller', 'supplier'}:
         messages.error(request, "Siz uchun mahsulotlar bo'limi yopilgan")
         return redirect('dashboard')
 
@@ -506,7 +526,7 @@ def products_list(request):
 
 @login_required
 def product_create(request):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -523,7 +543,7 @@ def product_create(request):
 
 @login_required
 def product_edit(request, pk):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -541,7 +561,7 @@ def product_edit(request, pk):
 
 @login_required
 def product_delete(request, pk):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -553,7 +573,7 @@ def product_delete(request, pk):
 
 @login_required
 def product_detail(request, pk):
-    if request.user.role in {'seller', 'supplier'}:
+    if request.user.role in {'director', 'seller', 'supplier'}:
         messages.error(request, "Siz uchun mahsulotlar bo'limi yopilgan")
         return redirect('dashboard')
 
@@ -564,7 +584,7 @@ def product_detail(request, pk):
 
 @login_required
 def clients_list(request):
-    if request.user.role in {'seller', 'warehouse', 'supplier'}:
+    if request.user.role in {'director', 'seller', 'warehouse', 'supplier'}:
         messages.error(request, "Siz uchun mijozlar ro'yxati yopilgan")
         return redirect('dashboard')
 
@@ -579,9 +599,8 @@ def clients_list(request):
 
 @login_required
 def client_create(request):
-    if not user_has_role(request.user, 'director'):
-        messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
-        return redirect('dashboard')
+    messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
+    return redirect('dashboard')
 
     if request.method == 'POST':
         form = ClientForm(request.POST)
@@ -596,9 +615,8 @@ def client_create(request):
 
 @login_required
 def client_edit(request, pk):
-    if not user_has_role(request.user, 'director'):
-        messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
-        return redirect('dashboard')
+    messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
+    return redirect('dashboard')
 
     client = get_object_or_404(Client, pk=pk)
     if request.method == 'POST':
@@ -614,9 +632,8 @@ def client_edit(request, pk):
 
 @login_required
 def client_delete(request, pk):
-    if not user_has_role(request.user, 'director'):
-        messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
-        return redirect('dashboard')
+    messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
+    return redirect('dashboard')
 
     client = get_object_or_404(Client, pk=pk)
     client.delete()
@@ -626,7 +643,7 @@ def client_delete(request, pk):
 
 @login_required
 def client_detail(request, pk):
-    if request.user.role in {'seller', 'warehouse', 'supplier'}:
+    if request.user.role in {'director', 'seller', 'warehouse', 'supplier'}:
         messages.error(request, "Siz uchun mijozlar ro'yxati yopilgan")
         return redirect('dashboard')
 
@@ -666,7 +683,7 @@ def sales_list(request):
 
 @login_required
 def sale_create(request):
-    if not user_has_role(request.user, 'director', 'seller'):
+    if request.user.role != 'seller':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -755,7 +772,7 @@ def sale_create(request):
         messages.success(request, f'Sotuv #{sale.id} muvaffaqiyatli yaratildi')
         return redirect('sales')
 
-    clients = Client.objects.order_by('name') if request.user.role == 'director' else Client.objects.none()
+    clients = Client.objects.none()
     products = Product.objects.filter(stock__gt=0)
     return render(
         request,
@@ -777,7 +794,7 @@ def sale_detail(request, pk):
 
 @login_required
 def sale_update_status(request, pk):
-    if request.user.role == 'supplier':
+    if request.user.role != 'seller':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -794,7 +811,7 @@ def sale_update_status(request, pk):
 
 @login_required
 def warehouse(request):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 
@@ -809,7 +826,7 @@ def warehouse(request):
 
 @login_required
 def warehouse_transaction(request):
-    if not user_has_role(request.user, 'director', 'warehouse'):
+    if request.user.role != 'warehouse':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 
@@ -852,11 +869,7 @@ def warehouse_transaction(request):
 
 @login_required
 def transactions_history(request):
-    if request.user.role == 'warehouse':
-        messages.error(request, "Omborchi uchun operatsiyalar tarixi yopilgan")
-        return redirect('dashboard')
-
-    if not user_has_role(request.user, 'director'):
+    if request.user.role != 'director':
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
         return redirect('dashboard')
 
@@ -1038,7 +1051,7 @@ def telegram_order_detail(request, pk):
 
 @login_required
 def telegram_order_update_status(request, pk):
-    if not user_has_role(request.user, 'director', 'seller'):
+    if request.user.role != 'seller':
         messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
         return redirect('dashboard')
 

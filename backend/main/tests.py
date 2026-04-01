@@ -152,6 +152,23 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, order.full_name)
         self.assertContains(response, 'Tasdiqlangan')
 
+    def test_seller_sees_accept_button_for_new_telegram_order_in_list(self):
+        profile = TelegramProfile.objects.create(chat_id=45677, chat_username='new_order_user')
+        TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Yangi buyurtma mijoz',
+            phone='+998901234599',
+            comment='Test',
+            total_amount=self.product.price,
+            status='new',
+        )
+
+        self.client.force_login(self.seller)
+        response = self.client.get(reverse('telegram_orders'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Qabul qilish')
+
     def test_supplier_legacy_supply_url_redirects_to_deliveries(self):
         self.client.force_login(self.supplier_user)
         response = self.client.get('/supplier/supplies/')

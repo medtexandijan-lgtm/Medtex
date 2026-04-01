@@ -89,6 +89,14 @@
             margin-top: 16px;
         }
 
+        .mini-add {
+            min-width: 160px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
         .mini-product-out {
             margin-top: 12px;
             color: var(--danger);
@@ -117,6 +125,23 @@
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 12px;
+        }
+
+        .mini-cart-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .mini-cart-badge {
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 700;
         }
 
         .mini-cart-line {
@@ -171,6 +196,16 @@
         .mini-message {
             margin-top: 12px;
             font-weight: 500;
+        }
+
+        .mini-checkout {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .mini-hidden {
+            display: none;
         }
 
         .mini-orders {
@@ -232,26 +267,32 @@
             <section class="mini-products" id="products"></section>
 
             <aside class="mini-cart">
-                <div class="mini-cart-title">Savat</div>
+                <div class="mini-cart-head">
+                    <div class="mini-cart-title">Savat</div>
+                    <div class="mini-cart-badge" id="cart-count">0 ta</div>
+                </div>
                 <div id="cart-lines" class="mini-empty">Hozircha savat bo'sh.</div>
                 <div class="mini-total">Jami: <span id="cart-total">0</span> so'm</div>
+                <button class="btn btn-primary btn-block" id="checkout-button" style="margin-top: 16px;">Buyurtma berish</button>
 
-                <div class="mini-form-group">
-                    <label for="full_name">Ism</label>
-                    <input id="full_name" placeholder="To'liq ism">
+                <div class="mini-checkout mini-hidden" id="checkout-form">
+                    <div class="mini-form-group">
+                        <label for="full_name">Ism</label>
+                        <input id="full_name" placeholder="To'liq ism">
+                    </div>
+
+                    <div class="mini-form-group">
+                        <label for="phone">Telefon</label>
+                        <input id="phone" placeholder="+998 90 123 45 67">
+                    </div>
+
+                    <div class="mini-form-group">
+                        <label for="comment">Izoh</label>
+                        <textarea id="comment" placeholder="Manzil yoki qo'shimcha izoh"></textarea>
+                    </div>
+
+                    <button class="btn btn-primary btn-block" id="submit-order" style="margin-top: 16px;">Buyurtmani yuborish</button>
                 </div>
-
-                <div class="mini-form-group">
-                    <label for="phone">Telefon</label>
-                    <input id="phone" placeholder="+998 90 123 45 67">
-                </div>
-
-                <div class="mini-form-group">
-                    <label for="comment">Izoh</label>
-                    <textarea id="comment" placeholder="Manzil yoki qo'shimcha izoh"></textarea>
-                </div>
-
-                <button class="btn btn-primary btn-block" id="submit-order" style="margin-top: 16px;">Buyurtma yuborish</button>
                 <div class="mini-message" id="success-message"></div>
             </aside>
 
@@ -268,6 +309,9 @@
         const productsNode = document.getElementById('products');
         const cartLinesNode = document.getElementById('cart-lines');
         const cartTotalNode = document.getElementById('cart-total');
+        const cartCountNode = document.getElementById('cart-count');
+        const checkoutButton = document.getElementById('checkout-button');
+        const checkoutForm = document.getElementById('checkout-form');
         const successNode = document.getElementById('success-message');
         const submitButton = document.getElementById('submit-order');
         const ordersListNode = document.getElementById('orders-list');
@@ -305,7 +349,9 @@
                     ${isAvailable ? '' : '<div class="mini-product-out">Hozircha tugagan</div>'}
                     <div class="mini-product-actions">
                         <input class="mini-qty" type="number" min="1" max="${Math.max(Number(product.stock), 1)}" value="1" ${isAvailable ? '' : 'disabled'}>
-                        <button class="btn btn-primary" ${isAvailable ? '' : 'disabled'}>${isAvailable ? "Savatga qo'shish" : 'Mavjud emas'}</button>
+                        <button class="btn btn-primary mini-add" ${isAvailable ? '' : 'disabled'}>
+                            ${isAvailable ? '<span>Savatcha</span><span>+</span>' : 'Mavjud emas'}
+                        </button>
                     </div>
                 `;
 
@@ -337,16 +383,22 @@
                 cartLinesNode.className = 'mini-empty';
                 cartLinesNode.textContent = "Hozircha savat bo'sh.";
                 cartTotalNode.textContent = '0';
+                cartCountNode.textContent = '0 ta';
+                checkoutButton.disabled = true;
+                checkoutButton.classList.remove('mini-hidden');
+                checkoutForm.classList.add('mini-hidden');
                 return;
             }
 
             cartLinesNode.className = '';
             cartLinesNode.innerHTML = '';
             let total = 0;
+            let count = 0;
 
             for (const item of cart.values()) {
                 const lineTotal = item.quantity * item.unit_price;
                 total += lineTotal;
+                count += item.quantity;
 
                 const row = document.createElement('div');
                 row.className = 'mini-cart-line';
@@ -358,6 +410,8 @@
             }
 
             cartTotalNode.textContent = formatPrice(total);
+            cartCountNode.textContent = `${count} ta`;
+            checkoutButton.disabled = false;
         }
 
         function renderOrders() {
@@ -442,6 +496,17 @@
             renderOrders();
         }
 
+        checkoutButton.addEventListener('click', () => {
+            if (!cart.size) {
+                statusNode.textContent = "Avval savatga mahsulot qo'shing.";
+                return;
+            }
+
+            checkoutForm.classList.remove('mini-hidden');
+            checkoutButton.classList.add('mini-hidden');
+            document.getElementById('full_name').focus();
+        });
+
         submitButton.addEventListener('click', async () => {
             successNode.textContent = '';
 
@@ -474,13 +539,19 @@
 
             successNode.textContent = `Buyurtma qabul qilindi. ID: #${result.order_id}`;
             successNode.style.color = 'var(--success)';
+            document.getElementById('full_name').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('comment').value = '';
             cart.clear();
+            checkoutForm.classList.add('mini-hidden');
+            checkoutButton.classList.remove('mini-hidden');
             renderCart();
             await loadOrders();
             tg.HapticFeedback?.notificationOccurred('success');
         });
 
         renderCart();
+        checkoutButton.disabled = true;
         bootstrap();
     </script>
 </body>

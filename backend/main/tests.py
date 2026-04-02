@@ -544,7 +544,9 @@ class CRMFlowTests(TestCase):
             data={
                 'full_name': 'Mini User',
                 'phone': '+998901234567',
+                'address': 'Andijon shahar, Bobur ko\'chasi 12',
                 'comment': 'Test order',
+                'location': {'latitude': 40.782123, 'longitude': 72.344567},
                 'items': [{'product_id': self.product.id, 'quantity': 2}],
             },
             content_type='application/json',
@@ -555,7 +557,11 @@ class CRMFlowTests(TestCase):
         payload = response.json()
         self.assertTrue(payload['ok'])
         self.assertEqual(TelegramOrder.objects.count(), 1)
-        self.assertEqual(TelegramOrder.objects.first().items.count(), 1)
+        order = TelegramOrder.objects.first()
+        self.assertEqual(order.items.count(), 1)
+        self.assertEqual(order.address, "Andijon shahar, Bobur ko'chasi 12")
+        self.assertEqual(str(order.location_latitude), '40.782123')
+        self.assertEqual(str(order.location_longitude), '72.344567')
 
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')
     @patch('main.views.validate_init_data')
@@ -578,6 +584,9 @@ class CRMFlowTests(TestCase):
             profile=profile,
             full_name='Mini User',
             phone='+998901234567',
+            address='Asaka tumani, Mustaqillik 5',
+            location_latitude='40.700000',
+            location_longitude='72.350000',
             comment='History test',
             status='new',
             total_amount=self.product.price,
@@ -599,6 +608,8 @@ class CRMFlowTests(TestCase):
         self.assertTrue(payload['ok'])
         self.assertEqual(len(payload['orders']), 1)
         self.assertEqual(payload['orders'][0]['id'], order.id)
+        self.assertEqual(payload['orders'][0]['address'], 'Asaka tumani, Mustaqillik 5')
+        self.assertEqual(payload['orders'][0]['location']['latitude'], '40.700000')
 
     @patch('main.views.send_message')
     def test_confirming_telegram_order_creates_sale(self, mock_send_message):
@@ -705,6 +716,7 @@ class CRMFlowTests(TestCase):
             data={
                 'full_name': 'Mini User 2',
                 'phone': '+998900000001',
+                'address': 'Test manzil',
                 'comment': '',
                 'items': [{'product_id': self.product.id, 'quantity': 999}],
             },
@@ -714,3 +726,27 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(TelegramOrder.objects.count(), 0)
+
+    def test_supplier_detail_shows_location_but_manager_detail_does_not(self):
+        profile = TelegramProfile.objects.create(chat_id=551122, chat_username='geo_user')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Geo Client',
+            phone='+998900000222',
+            address='Andijon, Amir Temur 10',
+            location_latitude='40.765432',
+            location_longitude='72.345678',
+            comment='Geo test',
+            total_amount=self.product.price,
+            status='confirmed',
+        )
+
+        self.client.force_login(self.supplier_user)
+        supplier_response = self.client.get(reverse('supplier_delivery_detail', args=[order.id]))
+        self.assertContains(supplier_response, '40,765432')
+        self.assertContains(supplier_response, 'maps.google.com')
+
+        self.client.force_login(self.seller)
+        manager_response = self.client.get(reverse('telegram_order_detail', args=[order.id]))
+        self.assertContains(manager_response, 'Andijon, Amir Temur 10')
+        self.assertNotContains(manager_response, '40,765432')

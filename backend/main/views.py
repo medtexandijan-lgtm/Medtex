@@ -116,8 +116,9 @@ def get_or_create_client_from_order(order):
         if not client.name:
             client.name = order.full_name
             updated = True
-        if not client.address and order.comment:
-            client.address = order.comment
+        preferred_address = order.address or order.comment
+        if not client.address and preferred_address:
+            client.address = preferred_address
             updated = True
         if updated:
             client.save()
@@ -126,12 +127,12 @@ def get_or_create_client_from_order(order):
     return Client.objects.create(
         name=order.full_name,
         phone=order.phone,
-        address=order.comment,
+        address=order.address or order.comment,
     )
 
 
 def notify_order_profile(profile, text):
-    if not profile or not profile.chat_id or not bot_enabled():
+    if not profile or not profile.chat_id:
         return
     try:
         send_message(profile.chat_id, text)
@@ -1320,13 +1321,24 @@ def mini_app_create_order(request):
 
     customer_name = (payload.get('full_name') or '').strip()
     phone = (payload.get('phone') or '').strip()
+    address = (payload.get('address') or '').strip()
     comment = (payload.get('comment') or '').strip()
+    location = payload.get('location') or {}
     items = payload.get('items') or []
 
-    if not customer_name or not phone:
-        return JsonResponse({'ok': False, 'error': 'Ism va telefon majburiy'}, status=400)
+    if not customer_name or not phone or not address:
+        return JsonResponse({'ok': False, 'error': 'Ism, telefon va manzil majburiy'}, status=400)
     if not isinstance(items, list) or not items:
         return JsonResponse({'ok': False, 'error': "Savat bo'sh"}, status=400)
+
+    latitude = None
+    longitude = None
+    if location:
+        try:
+            latitude = round(float(location.get('latitude')), 6)
+            longitude = round(float(location.get('longitude')), 6)
+        except (TypeError, ValueError):
+            return JsonResponse({'ok': False, 'error': "Lokatsiya ma'lumoti noto'g'ri"}, status=400)
 
     normalized_items = []
     for item in items:
@@ -1361,6 +1373,9 @@ def mini_app_create_order(request):
             profile=profile,
             full_name=customer_name,
             phone=phone,
+            address=address,
+            location_latitude=latitude,
+            location_longitude=longitude,
             comment=comment,
             status='new',
             total_amount=0,
@@ -1397,6 +1412,11 @@ def mini_app_orders(request):
             'status': order.status,
             'status_display': order.get_status_display(),
             'comment': order.comment,
+            'address': order.address,
+            'location': {
+                'latitude': str(order.location_latitude),
+                'longitude': str(order.location_longitude),
+            } if order.location_latitude is not None and order.location_longitude is not None else None,
             'total_amount': str(order.total_amount),
             'created_at': order.created_at.isoformat(),
             'sale_id': order.sale_id,

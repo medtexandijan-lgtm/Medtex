@@ -67,8 +67,24 @@
                 <span class="info-value">{{ order.phone }}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Manzil / izoh</span>
+                <span class="info-label">Manzil</span>
+                <span class="info-value">{{ order.address|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Qo'shimcha izoh</span>
                 <span class="info-value">{{ order.comment|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Lokatsiya</span>
+                <span class="info-value">
+                    {% if order.location_latitude and order.location_longitude %}
+                    <a href="https://maps.google.com/?q={{ order.location_latitude }},{{ order.location_longitude }}" target="_blank" rel="noopener">
+                        {{ order.location_latitude }}, {{ order.location_longitude }}
+                    </a>
+                    {% else %}
+                    -
+                    {% endif %}
+                </span>
             </div>
             <div class="info-item">
                 <span class="info-label">Sotuv</span>

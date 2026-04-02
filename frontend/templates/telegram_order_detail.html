@@ -59,6 +59,10 @@
         <h3 class="detail-section-title">Qo'shimcha ma'lumot</h3>
         <div class="info-grid">
             <div class="info-item">
+                <span class="info-label">Manzil</span>
+                <span class="info-value">{{ order.address|default:'-' }}</span>
+            </div>
+            <div class="info-item">
                 <span class="info-label">Izoh</span>
                 <span class="info-value">{{ order.comment|default:'-' }}</span>
             </div>

@@ -433,6 +433,27 @@
             resize: vertical;
         }
 
+        .mini-location-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .mini-location-button {
+            min-height: 48px;
+            white-space: nowrap;
+        }
+
+        .mini-location-preview {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
         .mini-submit {
             margin-top: 18px;
             min-height: 54px;
@@ -600,8 +621,22 @@
                     </div>
 
                     <div class="mini-form-group">
-                        <label for="comment">Izoh yoki manzil</label>
-                        <textarea id="comment" placeholder="Yetkazib berish manzili, mo'ljal yoki qo'shimcha izoh"></textarea>
+                        <label for="address">Yetkazib berish manzili</label>
+                        <input id="address" placeholder="Ko'cha, uy, mo'ljal yoki klinika manzili">
+                    </div>
+
+                    <div class="mini-form-group">
+                        <label for="location-preview">Lokatsiya</label>
+                        <div class="mini-location-row">
+                            <input id="location-preview" placeholder="Joriy joylashuv olinmagan" readonly>
+                            <button class="btn btn-secondary mini-location-button" type="button" id="pick-location">Manzilni tanlash</button>
+                        </div>
+                        <div class="mini-location-preview" id="location-note">Lokatsiya faqat kuryer ko'rishi uchun saqlanadi.</div>
+                    </div>
+
+                    <div class="mini-form-group">
+                        <label for="comment">Qo'shimcha izoh</label>
+                        <textarea id="comment" placeholder="Qavat, eshik kodi yoki qo'shimcha ko'rsatma"></textarea>
                     </div>
                 </div>
 
@@ -619,6 +654,9 @@
         const cartTotalNode = document.getElementById('cart-total');
         const successNode = document.getElementById('success-message');
         const submitButton = document.getElementById('submit-order');
+        const pickLocationButton = document.getElementById('pick-location');
+        const locationPreviewNode = document.getElementById('location-preview');
+        const locationNoteNode = document.getElementById('location-note');
         const summaryProductsNode = document.getElementById('summary-products');
         const summaryCartNode = document.getElementById('summary-cart');
         const productStockSummaryNode = document.getElementById('product-stock-summary');
@@ -626,6 +664,7 @@
         const cart = new Map();
         let authToken = '';
         let products = [];
+        let selectedLocation = null;
 
         function formatPrice(value) {
             return Number(value || 0).toLocaleString('uz-UZ');
@@ -774,6 +813,48 @@
             return response.json();
         }
 
+        function renderSelectedLocation() {
+            if (!selectedLocation) {
+                locationPreviewNode.value = '';
+                locationPreviewNode.placeholder = "Joriy joylashuv olinmagan";
+                locationNoteNode.textContent = "Lokatsiya faqat kuryer ko'rishi uchun saqlanadi.";
+                return;
+            }
+
+            locationPreviewNode.value = `${selectedLocation.latitude.toFixed(6)}, ${selectedLocation.longitude.toFixed(6)}`;
+            locationNoteNode.textContent = "Joriy lokatsiya olindi. Buyurtmada faqat kuryer uchun ko'rinadi.";
+        }
+
+        function requestCurrentLocation() {
+            if (!navigator.geolocation) {
+                setMessage("Bu qurilmada geolokatsiya qo'llab-quvvatlanmaydi.", 'error');
+                return;
+            }
+
+            pickLocationButton.disabled = true;
+            pickLocationButton.textContent = 'Aniqlanmoqda...';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    selectedLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                    };
+                    renderSelectedLocation();
+                    clearMessage();
+                    tg?.HapticFeedback?.impactOccurred('light');
+                    pickLocationButton.disabled = false;
+                    pickLocationButton.textContent = 'Manzilni tanlash';
+                },
+                () => {
+                    setMessage("Lokatsiyani olib bo'lmadi. Qurilmada ruxsat bering.", 'error');
+                    pickLocationButton.disabled = false;
+                    pickLocationButton.textContent = 'Manzilni tanlash';
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
         async function bootstrap() {
             if (!tg) {
                 statusNode.textContent = 'Telegram WebApp topilmadi. Bu sahifani bot ichidan oching.';
@@ -817,6 +898,7 @@
 
             const fullName = document.getElementById('full_name').value.trim();
             const phone = document.getElementById('phone').value.trim();
+            const address = document.getElementById('address').value.trim();
             const comment = document.getElementById('comment').value.trim();
 
             submitButton.disabled = true;
@@ -827,7 +909,9 @@
                 body: JSON.stringify({
                     full_name: fullName,
                     phone,
+                    address,
                     comment,
+                    location: selectedLocation,
                     items: Array.from(cart.values()).map((item) => ({
                         product_id: item.product_id,
                         quantity: item.quantity,
@@ -849,12 +933,17 @@
             setMessage(`Buyurtma qabul qilindi. ID: #${result.order_id}`, 'success');
             cart.clear();
             renderCart();
+            document.getElementById('address').value = '';
             document.getElementById('comment').value = '';
+            selectedLocation = null;
+            renderSelectedLocation();
             tg?.HapticFeedback?.notificationOccurred('success');
         });
 
+        pickLocationButton.addEventListener('click', requestCurrentLocation);
         renderCart();
         updateSummary();
+        renderSelectedLocation();
         bootstrap();
     </script>
 </body>

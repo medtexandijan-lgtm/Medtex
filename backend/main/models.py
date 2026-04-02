@@ -204,6 +204,21 @@ class TelegramOrder(models.Model):
     profile = models.ForeignKey(TelegramProfile, on_delete=models.CASCADE, related_name='orders')
     full_name = models.CharField(max_length=255, verbose_name='Buyurtmachi ismi')
     phone = models.CharField(max_length=30, verbose_name='Telefon')
+    address = models.TextField(blank=True, verbose_name='Manzil')
+    location_latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name='Lokatsiya latitude',
+    )
+    location_longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name='Lokatsiya longitude',
+    )
     comment = models.TextField(blank=True, verbose_name='Izoh')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', verbose_name='Holat')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Jami summa')

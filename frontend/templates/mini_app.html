@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Medical CRM Mini App</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -454,6 +460,94 @@
             font-weight: 600;
         }
 
+        .mini-map-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.58);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .mini-map-modal.show {
+            display: flex;
+        }
+
+        .mini-map-card {
+            width: min(100%, 760px);
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            box-shadow: 0 30px 60px -34px rgba(15, 23, 42, 0.72);
+            overflow: hidden;
+        }
+
+        .mini-map-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 20px 20px 14px;
+        }
+
+        .mini-map-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--mini-navy);
+        }
+
+        .mini-map-subtitle {
+            margin-top: 6px;
+            color: var(--mini-muted);
+            font-size: 14px;
+        }
+
+        .mini-map-close {
+            border: none;
+            background: #eef2ff;
+            color: #1e3a8a;
+            border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .mini-map-body {
+            padding: 0 20px 16px;
+        }
+
+        .mini-map-canvas {
+            height: min(58vh, 420px);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #dbe3ef;
+        }
+
+        .mini-map-help {
+            margin-top: 12px;
+            color: var(--mini-muted);
+            font-size: 13px;
+        }
+
+        .mini-map-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: 0 20px 20px;
+        }
+
+        .mini-map-selection {
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
         .mini-submit {
             margin-top: 18px;
             min-height: 54px;
@@ -520,7 +614,10 @@
             .mini-hero-top,
             .mini-product-head,
             .mini-product-actions,
-            .mini-section-head {
+            .mini-section-head,
+            .mini-location-row,
+            .mini-map-header,
+            .mini-map-footer {
                 flex-direction: column;
                 align-items: stretch;
             }
@@ -536,6 +633,13 @@
             .mini-products-panel,
             .mini-cart {
                 padding: 18px;
+            }
+
+            .mini-map-body,
+            .mini-map-footer,
+            .mini-map-header {
+                padding-left: 16px;
+                padding-right: 16px;
             }
         }
     </style>
@@ -629,7 +733,7 @@
                         <label for="location-preview">Lokatsiya</label>
                         <div class="mini-location-row">
                             <input id="location-preview" placeholder="Joriy joylashuv olinmagan" readonly>
-                            <button class="btn btn-secondary mini-location-button" type="button" id="pick-location">Manzilni tanlash</button>
+                            <button class="btn btn-secondary mini-location-button" type="button" id="pick-location">Xaritadan tanlash</button>
                         </div>
                         <div class="mini-location-preview" id="location-note">Lokatsiya faqat kuryer ko'rishi uchun saqlanadi.</div>
                     </div>
@@ -646,6 +750,34 @@
         </div>
     </div>
 
+    <div class="mini-map-modal" id="map-modal" aria-hidden="true">
+        <div class="mini-map-card">
+            <div class="mini-map-header">
+                <div>
+                    <div class="mini-map-title">Xaritadan manzil tanlash</div>
+                    <div class="mini-map-subtitle">Xaritada kerakli nuqtani bosing, so'ng tanlovni tasdiqlang.</div>
+                </div>
+                <button class="mini-map-close" type="button" id="close-map" aria-label="Yopish">×</button>
+            </div>
+            <div class="mini-map-body">
+                <div class="mini-map-canvas" id="location-map"></div>
+                <div class="mini-map-help">Agar geolokatsiya ruxsati berilgan bo'lsa, xarita joriy joyingiz atrofida ochiladi.</div>
+            </div>
+            <div class="mini-map-footer">
+                <div class="mini-map-selection" id="map-selection-status">Nuqta tanlanmagan</div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-secondary" type="button" id="cancel-map">Bekor qilish</button>
+                    <button class="btn btn-primary" type="button" id="confirm-map">Tanlovni saqlash</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
     <script>
         const tg = window.Telegram?.WebApp;
         const statusNode = document.getElementById('status');
@@ -657,6 +789,11 @@
         const pickLocationButton = document.getElementById('pick-location');
         const locationPreviewNode = document.getElementById('location-preview');
         const locationNoteNode = document.getElementById('location-note');
+        const mapModalNode = document.getElementById('map-modal');
+        const closeMapButton = document.getElementById('close-map');
+        const cancelMapButton = document.getElementById('cancel-map');
+        const confirmMapButton = document.getElementById('confirm-map');
+        const mapSelectionStatusNode = document.getElementById('map-selection-status');
         const summaryProductsNode = document.getElementById('summary-products');
         const summaryCartNode = document.getElementById('summary-cart');
         const productStockSummaryNode = document.getElementById('product-stock-summary');
@@ -665,6 +802,12 @@
         let authToken = '';
         let products = [];
         let selectedLocation = null;
+        let pendingLocation = null;
+        let map = null;
+        let mapMarker = null;
+
+        const DEFAULT_MAP_CENTER = [40.7821, 72.3442];
+        const DEFAULT_MAP_ZOOM = 13;
 
         function formatPrice(value) {
             return Number(value || 0).toLocaleString('uz-UZ');
@@ -825,32 +968,95 @@
             locationNoteNode.textContent = "Joriy lokatsiya olindi. Buyurtmada faqat kuryer uchun ko'rinadi.";
         }
 
-        function requestCurrentLocation() {
-            if (!navigator.geolocation) {
-                setMessage("Bu qurilmada geolokatsiya qo'llab-quvvatlanmaydi.", 'error');
+        function updateMapSelectionStatus(location) {
+            if (!location) {
+                mapSelectionStatusNode.textContent = "Nuqta tanlanmagan";
                 return;
             }
 
-            pickLocationButton.disabled = true;
-            pickLocationButton.textContent = 'Aniqlanmoqda...';
+            mapSelectionStatusNode.textContent = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+        }
+
+        function setMapMarker(location) {
+            if (!map) {
+                return;
+            }
+
+            if (!mapMarker) {
+                mapMarker = L.marker([location.latitude, location.longitude]).addTo(map);
+            } else {
+                mapMarker.setLatLng([location.latitude, location.longitude]);
+            }
+        }
+
+        function applyPendingLocation(location) {
+            pendingLocation = {
+                latitude: Number(location.latitude),
+                longitude: Number(location.longitude),
+            };
+            setMapMarker(pendingLocation);
+            updateMapSelectionStatus(pendingLocation);
+        }
+
+        function ensureMap(center = DEFAULT_MAP_CENTER, zoom = DEFAULT_MAP_ZOOM) {
+            if (!map) {
+                map = L.map('location-map', { zoomControl: true }).setView(center, zoom);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors',
+                }).addTo(map);
+                map.on('click', (event) => {
+                    applyPendingLocation({
+                        latitude: event.latlng.lat,
+                        longitude: event.latlng.lng,
+                    });
+                });
+            } else {
+                map.setView(center, zoom);
+                setTimeout(() => map.invalidateSize(), 0);
+            }
+        }
+
+        function closeMapModal() {
+            mapModalNode.classList.remove('show');
+            mapModalNode.setAttribute('aria-hidden', 'true');
+        }
+
+        function openMapModal() {
+            pendingLocation = selectedLocation ? { ...selectedLocation } : null;
+            mapModalNode.classList.add('show');
+            mapModalNode.setAttribute('aria-hidden', 'false');
+            ensureMap(
+                pendingLocation
+                    ? [pendingLocation.latitude, pendingLocation.longitude]
+                    : DEFAULT_MAP_CENTER,
+                pendingLocation ? 16 : DEFAULT_MAP_ZOOM
+            );
+            if (pendingLocation) {
+                setMapMarker(pendingLocation);
+            } else if (mapMarker) {
+                map.removeLayer(mapMarker);
+                mapMarker = null;
+            }
+            updateMapSelectionStatus(pendingLocation);
+
+            if (!navigator.geolocation) {
+                return;
+            }
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    selectedLocation = {
+                    const currentLocation = {
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
                     };
-                    renderSelectedLocation();
-                    clearMessage();
-                    tg?.HapticFeedback?.impactOccurred('light');
-                    pickLocationButton.disabled = false;
-                    pickLocationButton.textContent = 'Manzilni tanlash';
+                    if (!pendingLocation) {
+                        ensureMap([currentLocation.latitude, currentLocation.longitude], 16);
+                    } else {
+                        map.setView([currentLocation.latitude, currentLocation.longitude], 16);
+                    }
                 },
-                () => {
-                    setMessage("Lokatsiyani olib bo'lmadi. Qurilmada ruxsat bering.", 'error');
-                    pickLocationButton.disabled = false;
-                    pickLocationButton.textContent = 'Manzilni tanlash';
-                },
+                () => {},
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
@@ -940,7 +1146,25 @@
             tg?.HapticFeedback?.notificationOccurred('success');
         });
 
-        pickLocationButton.addEventListener('click', requestCurrentLocation);
+        pickLocationButton.addEventListener('click', openMapModal);
+        closeMapButton.addEventListener('click', closeMapModal);
+        cancelMapButton.addEventListener('click', closeMapModal);
+        confirmMapButton.addEventListener('click', () => {
+            if (!pendingLocation) {
+                setMessage("Xaritada avval nuqta tanlang.", 'error');
+                return;
+            }
+            selectedLocation = { ...pendingLocation };
+            renderSelectedLocation();
+            closeMapModal();
+            clearMessage();
+            tg?.HapticFeedback?.impactOccurred('light');
+        });
+        mapModalNode.addEventListener('click', (event) => {
+            if (event.target === mapModalNode) {
+                closeMapModal();
+            }
+        });
         renderCart();
         updateSummary();
         renderSelectedLocation();

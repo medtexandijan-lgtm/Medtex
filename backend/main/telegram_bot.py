@@ -71,24 +71,60 @@ def get_or_create_profile(chat):
 
 def build_help_text():
     return (
-        "Medical CRM xizmat botiga xush kelibsiz.\n"
-        "Bot orqali mahsulotlarni ko'rish, buyurtma berish va buyurtma holatini kuzatish mumkin.\n"
-        "Pastdagi tugma orqali mini ilovani ochib buyurtma berishingiz mumkin."
+        "Medical CRM yordam markazi\n\n"
+        "/start - asosiy menyuni ochadi\n"
+        "/link KOD - Telegram profilingizni CRM user bilan bog'laydi\n"
+        "/me - bog'langan profilingizni ko'rsatadi\n"
+        "/stats - rolingizga mos qisqa statistikani chiqaradi\n"
+        "/help - yordam oynasini qayta ochadi"
     )
 
 
-def build_mini_app_markup():
+def build_start_text():
+    lines = [
+        "Medical CRM botiga xush kelibsiz.",
+        "",
+        "Quyidagi menyu orqali tez ishlashingiz mumkin:",
+        "- Buyurtma berish: katalogni ochadi",
+        "- /stats: qisqa ko'rsatkichlar",
+        "- /me: bog'langan profilingiz",
+        "- /link KOD: CRM bilan ulash",
+    ]
     if not settings.APP_BASE_URL:
-        return None
-    return {
-        'inline_keyboard': [
+        lines.extend(
             [
-                {
-                    'text': 'Buyurtma berish',
-                    'web_app': {'url': f'{settings.APP_BASE_URL}/mini-app/'},
-                }
+                "",
+                "Mini App hozircha sozlanmagan.",
             ]
+        )
+    return "\n".join(lines)
+
+
+def build_main_menu_markup():
+    first_row = []
+    if settings.APP_BASE_URL:
+        first_row.append(
+            {
+                'text': 'Buyurtma berish',
+                'web_app': {'url': f'{settings.APP_BASE_URL}/mini-app/'},
+            }
+        )
+
+    keyboard = []
+    if first_row:
+        keyboard.append(first_row)
+
+    keyboard.extend(
+        [
+            [{'text': '/stats'}, {'text': '/me'}],
+            [{'text': '/help'}, {'text': '/link KOD'}],
         ]
+    )
+    return {
+        'keyboard': keyboard,
+        'resize_keyboard': True,
+        'is_persistent': True,
+        'input_field_placeholder': "Buyruq tanlang yoki yozing",
     }
 
 
@@ -192,7 +228,11 @@ def process_message(message):
     command = parts[0].lower()
 
     if command in {'/start', '/help'}:
-        send_message(chat['id'], build_help_text(), reply_markup=build_mini_app_markup())
+        send_message(
+            chat['id'],
+            build_start_text() if command == '/start' else build_help_text(),
+            reply_markup=build_main_menu_markup(),
+        )
         return
 
     if command == '/link':

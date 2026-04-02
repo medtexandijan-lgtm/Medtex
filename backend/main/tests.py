@@ -17,6 +17,7 @@ from .models import (
     User,
     WarehouseTransaction,
 )
+from .telegram_bot import build_main_menu_markup
 
 
 class CRMFlowTests(TestCase):
@@ -436,6 +437,19 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(self.product.stock, 10)
         self.assertContains(response, "yetarli qoldiq yo&#x27;q", html=False)
+
+    @override_settings(APP_BASE_URL='https://crm.example.com')
+    def test_start_menu_markup_contains_web_app_and_shortcuts(self):
+        markup = build_main_menu_markup()
+
+        self.assertTrue(markup['resize_keyboard'])
+        self.assertEqual(markup['keyboard'][0][0]['text'], 'Buyurtma berish')
+        self.assertEqual(
+            markup['keyboard'][0][0]['web_app']['url'],
+            'https://crm.example.com/mini-app/',
+        )
+        self.assertEqual(markup['keyboard'][1][0]['text'], '/stats')
+        self.assertEqual(markup['keyboard'][1][1]['text'], '/me')
 
     @override_settings(TELEGRAM_BOT_TOKEN='test-token', TELEGRAM_WEBHOOK_SECRET='secret123')
     @patch('main.telegram_bot.send_message')

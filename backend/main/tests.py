@@ -661,6 +661,26 @@ class CRMFlowTests(TestCase):
         self.assertFalse(payload['products'][1]['is_available'])
         self.assertTrue(TelegramProfile.objects.filter(chat_id=123456).exists())
 
+    def test_mini_app_catalog_returns_products_without_auth(self):
+        response = self.client.get(reverse('mini_app_catalog'))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertEqual(len(payload['products']), 2)
+        self.assertEqual(payload['products'][0]['name'], 'EKG apparati')
+
+    @override_settings(TELEGRAM_BOT_TOKEN='test-token')
+    def test_mini_app_auth_requires_non_empty_init_data(self):
+        response = self.client.post(
+            reverse('mini_app_auth'),
+            data={'initData': ''},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.')
+
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')
     @patch('main.views.validate_init_data')
     def test_mini_app_can_create_order(self, mock_validate):

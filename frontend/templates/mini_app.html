@@ -956,6 +956,18 @@
             return response.json();
         }
 
+        async function loadCatalogFallback(message) {
+            const fallback = await api('/mini-app/catalog/', { method: 'GET' });
+            products = fallback.products || [];
+            renderProducts();
+            statusNode.textContent = message;
+            productStockSummaryNode.textContent = products.length
+                ? `${products.filter((product) => product.stock > 0).length} ta aktiv pozitsiya`
+                : 'Mahsulot topilmadi';
+            submitButton.disabled = true;
+            setMessage(message, 'error');
+        }
+
         function renderSelectedLocation() {
             if (!selectedLocation) {
                 locationPreviewNode.value = '';
@@ -1072,25 +1084,29 @@
             tg.ready();
             tg.expand();
 
-            const result = await api('/mini-app/auth/', {
-                method: 'POST',
-                body: JSON.stringify({ initData: tg.initData }),
-            });
+            try {
+                const result = await api('/mini-app/auth/', {
+                    method: 'POST',
+                    body: JSON.stringify({ initData: tg.initData || '' }),
+                });
 
-            if (!result.ok) {
-                statusNode.textContent = result.error || 'Autentifikatsiya amalga oshmadi.';
-                submitButton.disabled = true;
-                productStockSummaryNode.textContent = 'Sessiya ochilmadi';
-                setMessage(result.error || 'Mini App sessiyasini ochib bo\'lmadi.', 'error');
-                return;
+                if (!result.ok) {
+                    await loadCatalogFallback(
+                        result.error || "Telegram sessiyasi eskirgan. Bot ichidan mini app'ni qayta oching."
+                    );
+                    return;
+                }
+
+                authToken = result.token;
+                products = result.products || [];
+                submitButton.disabled = false;
+                statusNode.textContent = result.profile?.linked_user
+                    ? `Bog'langan CRM user: ${result.profile.linked_user}`
+                    : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
+                renderProducts();
+            } catch (error) {
+                await loadCatalogFallback("Sessiya ochilmadi. Bot ichidan qayta urinib ko'ring.");
             }
-
-            authToken = result.token;
-            products = result.products || [];
-            statusNode.textContent = result.profile?.linked_user
-                ? `Bog'langan CRM user: ${result.profile.linked_user}`
-                : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
-            renderProducts();
         }
 
         submitButton.addEventListener('click', async () => {

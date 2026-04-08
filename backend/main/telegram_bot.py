@@ -10,6 +10,8 @@ from django.utils import timezone
 
 from .models import Client, Product, Sale, TelegramLinkCode, TelegramProfile, WarehouseTransaction
 
+TELEGRAM_INIT_DATA_MAX_AGE = 7 * 24 * 60 * 60
+
 
 def bot_enabled():
     return bool(settings.TELEGRAM_BOT_TOKEN)
@@ -146,7 +148,7 @@ def validate_init_data(init_data):
     auth_date = int(pairs.get('auth_date', '0') or '0')
     if not auth_date:
         return None
-    if timezone.now().timestamp() - auth_date > 86400:
+    if timezone.now().timestamp() - auth_date > TELEGRAM_INIT_DATA_MAX_AGE:
         return None
 
     user_raw = pairs.get('user')

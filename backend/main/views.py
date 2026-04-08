@@ -1248,6 +1248,16 @@ def mini_app(request):
     return render(request, 'mini_app.html', {'telegram_bot_name': 'Medical CRM Bot'})
 
 
+@require_GET
+def mini_app_catalog(request):
+    return JsonResponse(
+        {
+            'ok': True,
+            'products': serialize_catalog_products(),
+        }
+    )
+
+
 @require_POST
 @csrf_exempt
 def mini_app_auth(request):
@@ -1259,7 +1269,14 @@ def mini_app_auth(request):
     except json.JSONDecodeError:
         return JsonResponse({'ok': False, 'error': "Noto'g'ri JSON"}, status=400)
 
-    validated = validate_init_data(payload.get('initData', ''))
+    init_data = (payload.get('initData') or '').strip()
+    if not init_data:
+        return JsonResponse(
+            {'ok': False, 'error': 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.'},
+            status=400,
+        )
+
+    validated = validate_init_data(init_data)
     if not validated:
         return JsonResponse({'ok': False, 'error': 'Telegram autentifikatsiya xatosi'}, status=403)
 

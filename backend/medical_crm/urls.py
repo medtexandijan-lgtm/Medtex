@@ -54,6 +54,7 @@ urlpatterns = [
     path('telegram-orders/<int:pk>/', views.telegram_order_detail, name='telegram_order_detail'),
     path('telegram-orders/<int:pk>/status/', views.telegram_order_update_status, name='telegram_order_update_status'),
     path('mini-app/', views.mini_app, name='mini_app'),
+    path('mini-app/catalog/', views.mini_app_catalog, name='mini_app_catalog'),
     path('mini-app/auth/', views.mini_app_auth, name='mini_app_auth'),
     path('mini-app/orders/', views.mini_app_create_order, name='mini_app_create_order'),
     path('mini-app/orders/history/', views.mini_app_orders, name='mini_app_orders'),

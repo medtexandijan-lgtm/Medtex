@@ -34,7 +34,13 @@ from .models import (
     User,
     WarehouseTransaction,
 )
-from .telegram_bot import bot_enabled, process_update, send_message, validate_init_data
+from .telegram_bot import (
+    MINI_APP_LAUNCH_TOKEN_SALT,
+    bot_enabled,
+    process_update,
+    send_message,
+    validate_init_data,
+)
 
 
 MINI_APP_TOKEN_SALT = 'mini-app-auth'
@@ -159,6 +165,37 @@ def get_mini_app_profile(request):
         chat_id=payload.get('chat_id'),
         is_active=True,
     ).select_related('user').first()
+
+
+def get_profile_from_launch_token(launch_token):
+    if not launch_token:
+        return None
+
+    try:
+        payload = signing.loads(launch_token, salt=MINI_APP_LAUNCH_TOKEN_SALT, max_age=7 * 24 * 60 * 60)
+    except signing.BadSignature:
+        return None
+
+    chat_id = payload.get('chat_id')
+    if not chat_id:
+        return None
+
+    profile = TelegramProfile.objects.filter(chat_id=chat_id).first()
+    if profile:
+        profile.chat_username = payload.get('username', '')
+        profile.first_name = payload.get('first_name', '')
+        profile.last_name = payload.get('last_name', '')
+        profile.is_active = True
+        profile.save(update_fields=['chat_username', 'first_name', 'last_name', 'is_active', 'last_seen_at'])
+        return profile
+
+    return TelegramProfile.objects.create(
+        chat_id=chat_id,
+        chat_username=payload.get('username', ''),
+        first_name=payload.get('first_name', ''),
+        last_name=payload.get('last_name', ''),
+        is_active=True,
+    )
 
 
 def apply_sale_status_change(sale, new_status, actor):
@@ -1270,32 +1307,42 @@ def mini_app_auth(request):
         return JsonResponse({'ok': False, 'error': "Noto'g'ri JSON"}, status=400)
 
     init_data = (payload.get('initData') or '').strip()
-    if not init_data:
+    launch_token = (payload.get('launchToken') or '').strip()
+
+    profile = None
+    if init_data:
+        validated = validate_init_data(init_data)
+        if validated:
+            tg_user = validated['user']
+            profile = TelegramProfile.objects.filter(chat_id=tg_user['id']).first()
+            if profile:
+                profile.chat_username = tg_user.get('username', '')
+                profile.first_name = tg_user.get('first_name', '')
+                profile.last_name = tg_user.get('last_name', '')
+                profile.is_active = True
+                profile.save(update_fields=['chat_username', 'first_name', 'last_name', 'is_active', 'last_seen_at'])
+            else:
+                profile = TelegramProfile.objects.create(
+                    chat_id=tg_user['id'],
+                    chat_username=tg_user.get('username', ''),
+                    first_name=tg_user.get('first_name', ''),
+                    last_name=tg_user.get('last_name', ''),
+                    is_active=True,
+                )
+        elif launch_token:
+            profile = get_profile_from_launch_token(launch_token)
+        else:
+            return JsonResponse({'ok': False, 'error': 'Telegram autentifikatsiya xatosi'}, status=403)
+    elif launch_token:
+        profile = get_profile_from_launch_token(launch_token)
+    else:
         return JsonResponse(
             {'ok': False, 'error': 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.'},
             status=400,
         )
 
-    validated = validate_init_data(init_data)
-    if not validated:
-        return JsonResponse({'ok': False, 'error': 'Telegram autentifikatsiya xatosi'}, status=403)
-
-    tg_user = validated['user']
-    profile = TelegramProfile.objects.filter(chat_id=tg_user['id']).first()
-    if profile:
-        profile.chat_username = tg_user.get('username', '')
-        profile.first_name = tg_user.get('first_name', '')
-        profile.last_name = tg_user.get('last_name', '')
-        profile.is_active = True
-        profile.save(update_fields=['chat_username', 'first_name', 'last_name', 'is_active', 'last_seen_at'])
-    else:
-        profile = TelegramProfile.objects.create(
-            chat_id=tg_user['id'],
-            chat_username=tg_user.get('username', ''),
-            first_name=tg_user.get('first_name', ''),
-            last_name=tg_user.get('last_name', ''),
-            is_active=True,
-        )
+    if not profile:
+        return JsonResponse({'ok': False, 'error': 'Telegram sessiyasi yaroqsiz. Bot ichidan qayta oching.'}, status=403)
 
     products = serialize_catalog_products()
     token = issue_mini_app_token(profile)

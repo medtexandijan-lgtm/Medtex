@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.test import override_settings
 from django.urls import reverse
 from unittest.mock import patch
+from django.core import signing
 from django.utils import timezone
 
 from .models import (
@@ -17,6 +18,7 @@ from .models import (
     User,
     WarehouseTransaction,
 )
+from .telegram_bot import MINI_APP_LAUNCH_TOKEN_SALT, build_main_menu_markup
 from .telegram_bot import build_main_menu_markup
 
 
@@ -680,6 +682,43 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.')
+
+    @override_settings(TELEGRAM_BOT_TOKEN='test-token')
+    def test_mini_app_auth_accepts_signed_launch_token_without_init_data(self):
+        launch_token = signing.dumps(
+            {
+                'chat_id': 654321,
+                'username': 'launch_user',
+                'first_name': 'Launch',
+                'last_name': 'User',
+            },
+            salt=MINI_APP_LAUNCH_TOKEN_SALT,
+        )
+
+        response = self.client.post(
+            reverse('mini_app_auth'),
+            data={'initData': '', 'launchToken': launch_token},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertTrue(payload['token'])
+        self.assertTrue(TelegramProfile.objects.filter(chat_id=654321, chat_username='launch_user').exists())
+
+    def test_bot_menu_uses_signed_launch_token_for_mini_app(self):
+        markup = build_main_menu_markup(
+            {
+                'id': 777888,
+                'username': 'menu_user',
+                'first_name': 'Menu',
+                'last_name': 'User',
+            }
+        )
+
+        web_app_url = markup['keyboard'][0][0]['web_app']['url']
+        self.assertIn('/mini-app/?launch=', web_app_url)
 
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')
     @patch('main.views.validate_init_data')

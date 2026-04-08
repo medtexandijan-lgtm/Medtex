@@ -810,6 +810,7 @@
         const DEFAULT_MAP_ZOOM = 13;
         const INIT_DATA_RETRY_COUNT = 5;
         const INIT_DATA_RETRY_DELAY = 350;
+        const launchToken = new URLSearchParams(window.location.search).get('launch') || '';
 
         function formatPrice(value) {
             return Number(value || 0).toLocaleString('uz-UZ');
@@ -977,7 +978,7 @@
             const initData = await getTelegramInitData();
             const result = await api('/mini-app/auth/', {
                 method: 'POST',
-                body: JSON.stringify({ initData }),
+                body: JSON.stringify({ initData, launchToken }),
             });
 
             if (!result.ok) {

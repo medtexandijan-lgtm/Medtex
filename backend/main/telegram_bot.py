@@ -5,12 +5,14 @@ from urllib.parse import parse_qsl
 from urllib import request
 
 from django.conf import settings
+from django.core import signing
 from django.db.models import Sum
 from django.utils import timezone
 
 from .models import Client, Product, Sale, TelegramLinkCode, TelegramProfile, WarehouseTransaction
 
 TELEGRAM_INIT_DATA_MAX_AGE = 7 * 24 * 60 * 60
+MINI_APP_LAUNCH_TOKEN_SALT = 'mini-app-launch'
 
 
 def bot_enabled():
@@ -102,13 +104,26 @@ def build_start_text():
     return "\n".join(lines)
 
 
-def build_main_menu_markup():
+def issue_mini_app_launch_token(chat):
+    payload = {
+        'chat_id': chat['id'],
+        'username': chat.get('username', ''),
+        'first_name': chat.get('first_name', ''),
+        'last_name': chat.get('last_name', ''),
+    }
+    return signing.dumps(payload, salt=MINI_APP_LAUNCH_TOKEN_SALT)
+
+
+def build_main_menu_markup(chat=None):
     first_row = []
     if settings.APP_BASE_URL:
+        mini_app_url = f'{settings.APP_BASE_URL}/mini-app/'
+        if chat:
+            mini_app_url = f"{mini_app_url}?launch={issue_mini_app_launch_token(chat)}"
         first_row.append(
             {
                 'text': 'Buyurtma berish',
-                'web_app': {'url': f'{settings.APP_BASE_URL}/mini-app/'},
+                'web_app': {'url': mini_app_url},
             }
         )
 
@@ -233,7 +248,7 @@ def process_message(message):
         send_message(
             chat['id'],
             build_start_text() if command == '/start' else build_help_text(),
-            reply_markup=build_main_menu_markup(),
+            reply_markup=build_main_menu_markup(chat),
         )
         return
 

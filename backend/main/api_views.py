@@ -74,7 +74,7 @@ def get_courier_user_from_request(request):
 
 def get_courier_orders_queryset(user):
     return TelegramOrder.objects.filter(
-        Q(courier=user) | Q(courier__isnull=True, status='confirmed')
+        Q(courier=user) | Q(courier__isnull=True, status__in={'new', 'confirmed'})
     ).select_related('profile__user', 'sale', 'courier').prefetch_related('items__product').order_by('-created_at')
 
 
@@ -381,7 +381,7 @@ class CourierMeApiView(CourierApiBaseView):
         payload = UserSummarySerializer(user).data
         payload['stats'] = CourierStatsSerializer(
             {
-                'available_orders': TelegramOrder.objects.filter(status='confirmed', courier__isnull=True).count(),
+                'available_orders': TelegramOrder.objects.filter(status__in={'new', 'confirmed'}, courier__isnull=True).count(),
                 'active_orders': TelegramOrder.objects.filter(status='delivering', courier=user).count(),
                 'completed_orders': TelegramOrder.objects.filter(status='completed', courier=user).count(),
             }
@@ -396,7 +396,7 @@ class CourierDashboardApiView(CourierApiBaseView):
             return error
 
         payload = {
-            'available_orders': TelegramOrder.objects.filter(status='confirmed', courier__isnull=True).count(),
+            'available_orders': TelegramOrder.objects.filter(status__in={'new', 'confirmed'}, courier__isnull=True).count(),
             'active_orders': TelegramOrder.objects.filter(status='delivering', courier=user).count(),
             'completed_orders': TelegramOrder.objects.filter(status='completed', courier=user).count(),
         }

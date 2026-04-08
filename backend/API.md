@@ -102,8 +102,10 @@ Authorization: Bearer <token>
 
 Kuryer ro'yxatida:
 
+- `new` va hali ko'rib chiqilayotgan buyurtmalar
 - `confirmed` va hali kuryerga biriktirilmagan buyurtmalar
 - shu kuryerga biriktirilgan `delivering` va `completed` buyurtmalar
 
+`new` holatidagi buyurtmalar mobil ilovaga ko'rinadi, lekin qabul qilish faqat `confirmed` bo'lganda ishlaydi.  
 `accept` endpoint buyurtmani kuryerga biriktiradi va `delivering` holatiga o'tkazadi.  
 `complete` endpoint esa buyurtmani `completed` holatiga o'tkazadi.

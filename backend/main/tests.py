@@ -476,6 +476,13 @@ class CRMFlowTests(TestCase):
 
     def test_courier_api_orders_only_show_available_and_owned_deliveries(self):
         profile = TelegramProfile.objects.create(chat_id=45692, chat_username='courier_api_list')
+        new_order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='New Client',
+            phone='+998901000006',
+            total_amount=self.product.price,
+            status='new',
+        )
         available_order = TelegramOrder.objects.create(
             profile=profile,
             full_name='Available Client',
@@ -514,9 +521,35 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         returned_ids = {item['id'] for item in response.json()}
+        self.assertIn(new_order.id, returned_ids)
         self.assertIn(available_order.id, returned_ids)
         self.assertIn(owned_order.id, returned_ids)
         self.assertNotIn(hidden_order.id, returned_ids)
+
+    def test_courier_dashboard_counts_new_telegram_orders_as_available(self):
+        profile = TelegramProfile.objects.create(chat_id=45693, chat_username='courier_api_dashboard')
+        TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Dashboard New Client',
+            phone='+998901000007',
+            total_amount=self.product.price,
+            status='new',
+        )
+
+        login_response = self.client.post(
+            '/api/v1/courier/auth/login/',
+            data={'username': 'courier', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+        token = login_response.json()['token']
+
+        response = self.client.get(
+            '/api/v1/courier/dashboard/',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(response.json()['available_orders'], 1)
 
     def test_api_seller_cannot_create_sale_without_shift(self):
         self.client.force_login(self.seller)

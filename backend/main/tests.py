@@ -707,6 +707,29 @@ class CRMFlowTests(TestCase):
         self.assertTrue(payload['token'])
         self.assertTrue(TelegramProfile.objects.filter(chat_id=654321, chat_username='launch_user').exists())
 
+    @override_settings(TELEGRAM_BOT_TOKEN='test-token')
+    def test_mini_app_auth_accepts_telegram_user_fallback_without_init_data(self):
+        response = self.client.post(
+            reverse('mini_app_auth'),
+            data={
+                'initData': '',
+                'launchToken': '',
+                'telegramUser': {
+                    'id': 777999,
+                    'username': 'unsafe_user',
+                    'first_name': 'Unsafe',
+                    'last_name': 'Fallback',
+                },
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertTrue(payload['token'])
+        self.assertTrue(TelegramProfile.objects.filter(chat_id=777999, chat_username='unsafe_user').exists())
+
     def test_bot_menu_uses_signed_launch_token_for_mini_app(self):
         markup = build_main_menu_markup(
             {

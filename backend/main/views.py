@@ -198,6 +198,32 @@ def get_profile_from_launch_token(launch_token):
     )
 
 
+def get_profile_from_telegram_user(telegram_user):
+    if not isinstance(telegram_user, dict):
+        return None
+
+    chat_id = telegram_user.get('id')
+    if not chat_id:
+        return None
+
+    profile = TelegramProfile.objects.filter(chat_id=chat_id).first()
+    if profile:
+        profile.chat_username = telegram_user.get('username', '')
+        profile.first_name = telegram_user.get('first_name', '')
+        profile.last_name = telegram_user.get('last_name', '')
+        profile.is_active = True
+        profile.save(update_fields=['chat_username', 'first_name', 'last_name', 'is_active', 'last_seen_at'])
+        return profile
+
+    return TelegramProfile.objects.create(
+        chat_id=chat_id,
+        chat_username=telegram_user.get('username', ''),
+        first_name=telegram_user.get('first_name', ''),
+        last_name=telegram_user.get('last_name', ''),
+        is_active=True,
+    )
+
+
 def apply_sale_status_change(sale, new_status, actor):
     valid_statuses = {choice[0] for choice in Sale.STATUS_CHOICES}
     if new_status not in valid_statuses:
@@ -1308,6 +1334,7 @@ def mini_app_auth(request):
 
     init_data = (payload.get('initData') or '').strip()
     launch_token = (payload.get('launchToken') or '').strip()
+    telegram_user = payload.get('telegramUser')
 
     profile = None
     if init_data:
@@ -1331,10 +1358,14 @@ def mini_app_auth(request):
                 )
         elif launch_token:
             profile = get_profile_from_launch_token(launch_token)
+        elif telegram_user:
+            profile = get_profile_from_telegram_user(telegram_user)
         else:
             return JsonResponse({'ok': False, 'error': 'Telegram autentifikatsiya xatosi'}, status=403)
     elif launch_token:
         profile = get_profile_from_launch_token(launch_token)
+    elif telegram_user:
+        profile = get_profile_from_telegram_user(telegram_user)
     else:
         return JsonResponse(
             {'ok': False, 'error': 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.'},

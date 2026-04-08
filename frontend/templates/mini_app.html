@@ -978,7 +978,11 @@
             const initData = await getTelegramInitData();
             const result = await api('/mini-app/auth/', {
                 method: 'POST',
-                body: JSON.stringify({ initData, launchToken }),
+                body: JSON.stringify({
+                    initData,
+                    launchToken,
+                    telegramUser: tg?.initDataUnsafe?.user || null,
+                }),
             });
 
             if (!result.ok) {

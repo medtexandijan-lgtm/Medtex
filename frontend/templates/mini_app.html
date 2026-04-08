@@ -808,6 +808,8 @@
 
         const DEFAULT_MAP_CENTER = [40.7821, 72.3442];
         const DEFAULT_MAP_ZOOM = 13;
+        const INIT_DATA_RETRY_COUNT = 5;
+        const INIT_DATA_RETRY_DELAY = 350;
 
         function formatPrice(value) {
             return Number(value || 0).toLocaleString('uz-UZ');
@@ -956,6 +958,38 @@
             return response.json();
         }
 
+        function delay(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function getTelegramInitData() {
+            for (let attempt = 0; attempt < INIT_DATA_RETRY_COUNT; attempt += 1) {
+                const initData = (tg?.initData || '').trim();
+                if (initData) {
+                    return initData;
+                }
+                await delay(INIT_DATA_RETRY_DELAY);
+            }
+            return '';
+        }
+
+        async function authenticateMiniApp() {
+            const initData = await getTelegramInitData();
+            const result = await api('/mini-app/auth/', {
+                method: 'POST',
+                body: JSON.stringify({ initData }),
+            });
+
+            if (!result.ok) {
+                authToken = '';
+                return result;
+            }
+
+            authToken = result.token;
+            products = result.products || [];
+            return result;
+        }
+
         async function loadCatalogFallback(message) {
             const fallback = await api('/mini-app/catalog/', { method: 'GET' });
             products = fallback.products || [];
@@ -964,7 +998,7 @@
             productStockSummaryNode.textContent = products.length
                 ? `${products.filter((product) => product.stock > 0).length} ta aktiv pozitsiya`
                 : 'Mahsulot topilmadi';
-            submitButton.disabled = true;
+            submitButton.disabled = false;
             setMessage(message, 'error');
         }
 
@@ -1085,20 +1119,15 @@
             tg.expand();
 
             try {
-                const result = await api('/mini-app/auth/', {
-                    method: 'POST',
-                    body: JSON.stringify({ initData: tg.initData || '' }),
-                });
+                const result = await authenticateMiniApp();
 
                 if (!result.ok) {
                     await loadCatalogFallback(
-                        result.error || "Telegram sessiyasi eskirgan. Bot ichidan mini app'ni qayta oching."
+                        result.error || "Telegram sessiyasi kechikdi. Buyurtma berishda yana bir marta urinib ko'riladi."
                     );
                     return;
                 }
 
-                authToken = result.token;
-                products = result.products || [];
                 submitButton.disabled = false;
                 statusNode.textContent = result.profile?.linked_user
                     ? `Bog'langan CRM user: ${result.profile.linked_user}`
@@ -1122,6 +1151,21 @@
             const phone = document.getElementById('phone').value.trim();
             const address = document.getElementById('address').value.trim();
             const comment = document.getElementById('comment').value.trim();
+
+            if (!authToken) {
+                statusNode.textContent = 'Telegram sessiyasi qayta tekshirilmoqda...';
+                const authResult = await authenticateMiniApp();
+                if (!authResult.ok) {
+                    statusNode.textContent = authResult.error || 'Autentifikatsiya amalga oshmadi.';
+                    setMessage(authResult.error || "Bot ichidan mini app'ni qayta oching.", 'error');
+                    return;
+                }
+
+                statusNode.textContent = authResult.profile?.linked_user
+                    ? `Bog'langan CRM user: ${authResult.profile.linked_user}`
+                    : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
+                renderProducts();
+            }
 
             submitButton.disabled = true;
             submitButton.textContent = 'Yuborilmoqda...';

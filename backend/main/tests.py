@@ -46,6 +46,12 @@ class CRMFlowTests(TestCase):
             role='supplier',
             first_name='Yetkazib',
         )
+        self.courier_user = User.objects.create_user(
+            username='courier',
+            password='testpass123',
+            role='courier',
+            first_name='Kuryer',
+        )
         self.category = Category.objects.create(name='Monitor')
         self.client_obj = Client.objects.create(name='Klinika', phone='+998900000000')
         self.product = Product.objects.create(
@@ -261,6 +267,7 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Yetkazib beruvchi')
+        self.assertContains(response, 'Kuryer')
 
     def test_director_dashboard_focuses_on_employee_control(self):
         self.client.force_login(self.director)
@@ -376,6 +383,138 @@ class CRMFlowTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 8)
         self.assertEqual(Sale.objects.count(), 1)
+
+    def test_courier_api_login_returns_bearer_token(self):
+        response = self.client.post(
+            '/api/v1/courier/auth/login/',
+            data={'username': 'courier', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['token'])
+        self.assertEqual(payload['user']['role'], 'courier')
+
+    @patch('main.api_views.notify_order_profile')
+    def test_courier_api_can_accept_confirmed_order(self, mock_notify):
+        profile = TelegramProfile.objects.create(chat_id=45690, chat_username='courier_api_accept')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Courier API Client',
+            phone='+998901000001',
+            comment='Namangan',
+            total_amount=self.product.price,
+            status='confirmed',
+        )
+        order.items.create(
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=self.product.price,
+        )
+
+        login_response = self.client.post(
+            '/api/v1/courier/auth/login/',
+            data={'username': 'courier', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+        token = login_response.json()['token']
+
+        response = self.client.post(
+            f'/api/v1/courier/orders/{order.id}/accept/',
+            data={},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'delivering')
+        self.assertEqual(order.courier, self.courier_user)
+        mock_notify.assert_called_once()
+
+    @patch('main.api_views.notify_order_profile')
+    def test_courier_api_can_complete_only_own_delivery(self, mock_notify):
+        profile = TelegramProfile.objects.create(chat_id=45691, chat_username='courier_api_complete')
+        order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Courier Complete Client',
+            phone='+998901000002',
+            comment='Fargona',
+            total_amount=self.product.price,
+            status='delivering',
+            courier=self.courier_user,
+        )
+        order.items.create(
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=self.product.price,
+        )
+
+        login_response = self.client.post(
+            '/api/v1/courier/auth/login/',
+            data={'username': 'courier', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+        token = login_response.json()['token']
+
+        response = self.client.post(
+            f'/api/v1/courier/orders/{order.id}/complete/',
+            data={},
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'completed')
+        mock_notify.assert_called_once()
+
+    def test_courier_api_orders_only_show_available_and_owned_deliveries(self):
+        profile = TelegramProfile.objects.create(chat_id=45692, chat_username='courier_api_list')
+        available_order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Available Client',
+            phone='+998901000003',
+            total_amount=self.product.price,
+            status='confirmed',
+        )
+        owned_order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Owned Client',
+            phone='+998901000004',
+            total_amount=self.product.price,
+            status='delivering',
+            courier=self.courier_user,
+        )
+        hidden_order = TelegramOrder.objects.create(
+            profile=profile,
+            full_name='Hidden Client',
+            phone='+998901000005',
+            total_amount=self.product.price,
+            status='delivering',
+            courier=self.supplier_user,
+        )
+
+        login_response = self.client.post(
+            '/api/v1/courier/auth/login/',
+            data={'username': 'courier', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+        token = login_response.json()['token']
+
+        response = self.client.get(
+            '/api/v1/courier/orders/',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        returned_ids = {item['id'] for item in response.json()}
+        self.assertIn(available_order.id, returned_ids)
+        self.assertIn(owned_order.id, returned_ids)
+        self.assertNotIn(hidden_order.id, returned_ids)
 
     def test_api_seller_cannot_create_sale_without_shift(self):
         self.client.force_login(self.seller)

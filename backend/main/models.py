@@ -8,6 +8,7 @@ class User(AbstractUser):
         ('seller', 'Sotuvchi'),
         ('warehouse', 'Omborchi'),
         ('supplier', 'Yetkazib beruvchi'),
+        ('courier', 'Kuryer'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='seller')
     phone = models.CharField(max_length=20, blank=True)
@@ -228,6 +229,14 @@ class TelegramOrder(models.Model):
         related_name='telegram_order',
         null=True,
         blank=True,
+    )
+    courier = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='courier_orders',
+        null=True,
+        blank=True,
+        limit_choices_to={'role__in': ['supplier', 'courier']},
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

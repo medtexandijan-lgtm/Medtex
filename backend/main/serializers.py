@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Client, Product, Sale, SaleItem, SellerShift, User
+from .models import Category, Client, Product, Sale, SaleItem, SellerShift, TelegramOrder, TelegramOrderItem, User
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
@@ -107,3 +107,41 @@ class SellerShiftReportSerializer(serializers.Serializer):
     total_quantity = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=12, decimal_places=2)
     items = SaleItemReadSerializer(many=True)
+
+
+class TelegramOrderItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = TelegramOrderItem
+        fields = ['id', 'product', 'quantity', 'unit_price', 'total_price']
+
+
+class CourierOrderSerializer(serializers.ModelSerializer):
+    courier = UserSummarySerializer(read_only=True)
+    items = TelegramOrderItemSerializer(read_only=True, many=True)
+    sale_id = serializers.IntegerField(source='sale.id', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = TelegramOrder
+        fields = [
+            'id',
+            'full_name',
+            'phone',
+            'comment',
+            'status',
+            'status_display',
+            'total_amount',
+            'sale_id',
+            'courier',
+            'created_at',
+            'updated_at',
+            'items',
+        ]
+
+
+class CourierStatsSerializer(serializers.Serializer):
+    available_orders = serializers.IntegerField()
+    active_orders = serializers.IntegerField()
+    completed_orders = serializers.IntegerField()

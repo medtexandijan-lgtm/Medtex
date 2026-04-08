@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.core import signing
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -8,10 +9,12 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Client, Product, Sale, SaleItem, SellerShift, WarehouseTransaction
+from .models import Category, Client, Product, Sale, SaleItem, SellerShift, TelegramOrder, User, WarehouseTransaction
 from .serializers import (
     CategorySerializer,
     ClientSerializer,
+    CourierOrderSerializer,
+    CourierStatsSerializer,
     ProductSerializer,
     SaleCreateSerializer,
     SaleSerializer,
@@ -19,7 +22,10 @@ from .serializers import (
     SellerShiftSerializer,
     UserSummarySerializer,
 )
-from .views import build_shift_report_context, get_active_shift
+from .views import build_shift_report_context, get_active_shift, notify_order_profile
+
+
+COURIER_TOKEN_SALT = 'courier-mobile-auth'
 
 
 class IsDirector(permissions.BasePermission):
@@ -30,6 +36,60 @@ class IsDirector(permissions.BasePermission):
 class IsDirectorOrSeller(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in {'director', 'seller'}
+
+
+class IsCourier(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in {'supplier', 'courier'}
+
+
+def issue_courier_token(user):
+    payload = {
+        'user_id': user.id,
+        'role': user.role,
+    }
+    return signing.dumps(payload, salt=COURIER_TOKEN_SALT)
+
+
+def get_courier_user_from_request(request):
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+
+    token = auth_header.split(' ', 1)[1].strip()
+    if not token:
+        return None
+
+    try:
+        payload = signing.loads(token, salt=COURIER_TOKEN_SALT, max_age=604800)
+    except signing.BadSignature:
+        return None
+
+    return User.objects.filter(
+        id=payload.get('user_id'),
+        role__in={'supplier', 'courier'},
+        is_active=True,
+    ).first()
+
+
+def get_courier_orders_queryset(user):
+    return TelegramOrder.objects.filter(
+        Q(courier=user) | Q(courier__isnull=True, status='confirmed')
+    ).select_related('profile__user', 'sale', 'courier').prefetch_related('items__product').order_by('-created_at')
+
+
+class CourierApiBaseView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def dispatch(self, request, *args, **kwargs):
+        request.courier_user = get_courier_user_from_request(request)
+        return super().dispatch(request, *args, **kwargs)
+
+    def require_courier(self, request):
+        user = getattr(request, 'courier_user', None)
+        if not user:
+            return None, Response({'detail': 'Kuryer autentifikatsiyasi topilmadi'}, status=status.HTTP_401_UNAUTHORIZED)
+        return user, None
 
 
 class ApiRootView(APIView):
@@ -291,3 +351,125 @@ class ShiftReportApiView(APIView):
             'items': report_context['shift_items'],
         }
         return Response(SellerShiftReportSerializer(payload).data)
+
+
+class CourierLoginApiView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username', '').strip()
+        password = request.data.get('password', '')
+
+        user = authenticate(request, username=username, password=password)
+        if not user or user.role not in {'supplier', 'courier'}:
+            return Response({'detail': "Kuryer login yoki paroli noto'g'ri"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                'token': issue_courier_token(user),
+                'user': UserSummarySerializer(user).data,
+            }
+        )
+
+
+class CourierMeApiView(CourierApiBaseView):
+    def get(self, request):
+        user, error = self.require_courier(request)
+        if error:
+            return error
+
+        payload = UserSummarySerializer(user).data
+        payload['stats'] = CourierStatsSerializer(
+            {
+                'available_orders': TelegramOrder.objects.filter(status='confirmed', courier__isnull=True).count(),
+                'active_orders': TelegramOrder.objects.filter(status='delivering', courier=user).count(),
+                'completed_orders': TelegramOrder.objects.filter(status='completed', courier=user).count(),
+            }
+        ).data
+        return Response(payload)
+
+
+class CourierDashboardApiView(CourierApiBaseView):
+    def get(self, request):
+        user, error = self.require_courier(request)
+        if error:
+            return error
+
+        payload = {
+            'available_orders': TelegramOrder.objects.filter(status='confirmed', courier__isnull=True).count(),
+            'active_orders': TelegramOrder.objects.filter(status='delivering', courier=user).count(),
+            'completed_orders': TelegramOrder.objects.filter(status='completed', courier=user).count(),
+        }
+        return Response(CourierStatsSerializer(payload).data)
+
+
+class CourierOrderListApiView(CourierApiBaseView):
+    def get(self, request):
+        user, error = self.require_courier(request)
+        if error:
+            return error
+
+        queryset = get_courier_orders_queryset(user)
+        status_param = request.query_params.get('status', '').strip()
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        return Response(CourierOrderSerializer(queryset, many=True).data)
+
+
+class CourierOrderDetailApiView(CourierApiBaseView):
+    def get(self, request, pk):
+        user, error = self.require_courier(request)
+        if error:
+            return error
+
+        order = get_object_or_404(get_courier_orders_queryset(user), pk=pk)
+        return Response(CourierOrderSerializer(order).data)
+
+
+class CourierOrderAcceptApiView(CourierApiBaseView):
+    def post(self, request, pk):
+        user, error = self.require_courier(request)
+        if error:
+            return error
+
+        order = get_object_or_404(
+            TelegramOrder.objects.select_related('courier', 'profile__user', 'sale').prefetch_related('items__product'),
+            pk=pk,
+        )
+        if order.status != 'confirmed':
+            return Response({'detail': 'Faqat tasdiqlangan buyurtmani qabul qilish mumkin'}, status=status.HTTP_400_BAD_REQUEST)
+        if order.courier_id and order.courier_id != user.id:
+            return Response({'detail': 'Bu buyurtma boshqa kuryerga biriktirilgan'}, status=status.HTTP_403_FORBIDDEN)
+
+        order.courier = user
+        order.status = 'delivering'
+        order.save(update_fields=['courier', 'status', 'updated_at'])
+        notify_order_profile(
+            order.profile,
+            f"Buyurtmangiz kuryer tomonidan qabul qilindi va yetkazib berilyapti. Buyurtma raqami: #{order.id}.",
+        )
+        return Response(CourierOrderSerializer(order).data)
+
+
+class CourierOrderCompleteApiView(CourierApiBaseView):
+    def post(self, request, pk):
+        user, error = self.require_courier(request)
+        if error:
+            return error
+
+        order = get_object_or_404(
+            TelegramOrder.objects.select_related('courier', 'profile__user', 'sale').prefetch_related('items__product'),
+            pk=pk,
+            courier=user,
+        )
+        if order.status != 'delivering':
+            return Response({'detail': 'Faqat yetkazilayotgan buyurtmani yakunlash mumkin'}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.status = 'completed'
+        order.save(update_fields=['status', 'updated_at'])
+        notify_order_profile(
+            order.profile,
+            f"Buyurtmangiz muvaffaqiyatli yetkazildi. Buyurtma raqami: #{order.id}.",
+        )
+        return Response(CourierOrderSerializer(order).data)

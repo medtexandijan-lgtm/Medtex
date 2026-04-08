@@ -673,15 +673,19 @@ class CRMFlowTests(TestCase):
         self.assertEqual(payload['products'][0]['name'], 'EKG apparati')
 
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')
-    def test_mini_app_auth_requires_non_empty_init_data(self):
+    def test_mini_app_auth_falls_back_to_guest_session_when_telegram_session_missing(self):
         response = self.client.post(
             reverse('mini_app_auth'),
             data={'initData': ''},
             content_type='application/json',
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.')
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertTrue(payload['token'])
+        self.assertTrue(payload['profile']['is_guest'])
+        self.assertLess(payload['profile']['chat_id'], 0)
 
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')
     def test_mini_app_auth_accepts_signed_launch_token_without_init_data(self):

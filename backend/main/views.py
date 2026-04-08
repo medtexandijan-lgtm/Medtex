@@ -1,4 +1,5 @@
 import json
+import time
 
 from django.conf import settings
 from django.contrib import messages
@@ -220,6 +221,18 @@ def get_profile_from_telegram_user(telegram_user):
         chat_username=telegram_user.get('username', ''),
         first_name=telegram_user.get('first_name', ''),
         last_name=telegram_user.get('last_name', ''),
+        is_active=True,
+    )
+
+
+def create_guest_mini_app_profile():
+    # Negative synthetic chat ids avoid clashing with real Telegram chat ids.
+    chat_id = -int(time.time() * 1000000)
+    return TelegramProfile.objects.create(
+        chat_id=chat_id,
+        chat_username='guest',
+        first_name='Guest',
+        last_name='MiniApp',
         is_active=True,
     )
 
@@ -1367,10 +1380,7 @@ def mini_app_auth(request):
     elif telegram_user:
         profile = get_profile_from_telegram_user(telegram_user)
     else:
-        return JsonResponse(
-            {'ok': False, 'error': 'Telegram sessiyasi topilmadi. Bot ichidan qayta oching.'},
-            status=400,
-        )
+        profile = create_guest_mini_app_profile()
 
     if not profile:
         return JsonResponse({'ok': False, 'error': 'Telegram sessiyasi yaroqsiz. Bot ichidan qayta oching.'}, status=403)
@@ -1385,6 +1395,7 @@ def mini_app_auth(request):
                 'chat_id': profile.chat_id,
                 'chat_username': profile.chat_username,
                 'linked_user': profile.user.username if profile.user else None,
+                'is_guest': profile.chat_id < 0,
             },
             'products': products,
             'orders': [

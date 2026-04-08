@@ -1134,9 +1134,11 @@
                 }
 
                 submitButton.disabled = false;
-                statusNode.textContent = result.profile?.linked_user
-                    ? `Bog'langan CRM user: ${result.profile.linked_user}`
-                    : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
+                statusNode.textContent = result.profile?.is_guest
+                    ? "Telegram sessiyasi cheklangan, lekin buyurtma yuborish ishlaydi."
+                    : result.profile?.linked_user
+                        ? `Bog'langan CRM user: ${result.profile.linked_user}`
+                        : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
                 renderProducts();
             } catch (error) {
                 await loadCatalogFallback("Sessiya ochilmadi. Bot ichidan qayta urinib ko'ring.");
@@ -1166,9 +1168,11 @@
                     return;
                 }
 
-                statusNode.textContent = authResult.profile?.linked_user
-                    ? `Bog'langan CRM user: ${authResult.profile.linked_user}`
-                    : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
+                statusNode.textContent = authResult.profile?.is_guest
+                    ? "Telegram sessiyasi cheklangan, lekin buyurtma yuborish ishlaydi."
+                    : authResult.profile?.linked_user
+                        ? `Bog'langan CRM user: ${authResult.profile.linked_user}`
+                        : "Telegram profilingiz CRM userga bog'lanmagan, lekin buyurtma bera olasiz.";
                 renderProducts();
             }
 

@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from decimal import Decimal
 import time
 
@@ -100,6 +101,53 @@ def build_shift_report_context(shift):
         'shift_total_revenue': total_revenue,
         'shift_total_sales': sales.count(),
         'shift_total_quantity': total_quantity,
+    }
+
+
+def build_sales_period_stats(start_date, end_date):
+    sales = Sale.objects.filter(
+        status='completed',
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    )
+    aggregated = sales.aggregate(total=Sum('total_amount'), count=Count('id'))
+    return {
+        'total': aggregated['total'] or Decimal('0'),
+        'count': aggregated['count'] or 0,
+        'start_date': start_date,
+        'end_date': end_date,
+    }
+
+
+def build_change_stats(current_total, previous_total):
+    current_total = Decimal(current_total or 0)
+    previous_total = Decimal(previous_total or 0)
+
+    if previous_total == 0:
+        if current_total == 0:
+            return {
+                'direction': 'same',
+                'percent': Decimal('0.0'),
+                'has_baseline': True,
+            }
+        return {
+            'direction': 'up',
+            'percent': None,
+            'has_baseline': False,
+        }
+
+    change_percent = ((current_total - previous_total) / previous_total) * Decimal('100')
+    if change_percent > 0:
+        direction = 'up'
+    elif change_percent < 0:
+        direction = 'down'
+    else:
+        direction = 'same'
+
+    return {
+        'direction': direction,
+        'percent': abs(change_percent).quantize(Decimal('0.1')),
+        'has_baseline': True,
     }
 
 
@@ -490,9 +538,22 @@ def dashboard(request):
     today = timezone.now().date()
 
     if user_role == 'director':
-        open_shift_count = SellerShift.objects.filter(ended_at__isnull=True).count()
-        new_orders_count = TelegramOrder.objects.filter(status='new').count()
         active_deliveries_count = TelegramOrder.objects.filter(status__in={'confirmed', 'delivering'}).count()
+        yesterday = today - timedelta(days=1)
+        week_start = today - timedelta(days=today.weekday())
+        previous_week_start = week_start - timedelta(days=7)
+        previous_week_end = week_start - timedelta(days=1)
+        month_start = today.replace(day=1)
+        previous_month_end = month_start - timedelta(days=1)
+        previous_month_start = previous_month_end.replace(day=1)
+
+        daily_stats = build_sales_period_stats(today, today)
+        previous_daily_stats = build_sales_period_stats(yesterday, yesterday)
+        weekly_stats = build_sales_period_stats(week_start, today)
+        previous_weekly_stats = build_sales_period_stats(previous_week_start, previous_week_end)
+        monthly_stats = build_sales_period_stats(month_start, today)
+        previous_monthly_stats = build_sales_period_stats(previous_month_start, previous_month_end)
+
         cash_revenue = Sale.objects.filter(
             status='completed',
             payment_type='cash',
@@ -501,33 +562,23 @@ def dashboard(request):
             status='completed',
             payment_type='card',
         ).aggregate(total=Sum('total_amount'))['total'] or 0
-        users = User.objects.exclude(role='director')
-        active_shift_map = {
-            shift.seller_id: shift
-            for shift in SellerShift.objects.filter(ended_at__isnull=True).select_related('seller')
-        }
-        employee_rows = []
-        for employee in users.order_by('role', 'first_name', 'username'):
-            employee_rows.append(
-                {
-                    'id': employee.id,
-                    'name': display_name(employee),
-                    'username': employee.username,
-                    'role_display': employee.get_role_display(),
-                    'is_active': employee.is_active,
-                    'active_shift': active_shift_map.get(employee.id) if employee.role == 'seller' else None,
-                }
-            )
-
-        context['seller_count'] = users.filter(role='seller').count()
-        context['warehouse_count'] = users.filter(role='warehouse').count()
-        context['supplier_count'] = users.filter(role='supplier').count()
-        context['open_shift_count'] = open_shift_count
-        context['new_orders_count'] = new_orders_count
         context['active_deliveries_count'] = active_deliveries_count
+        context['daily_stats'] = daily_stats
+        context['daily_change'] = build_change_stats(daily_stats['total'], previous_daily_stats['total'])
+        context['weekly_stats'] = weekly_stats
+        context['weekly_change'] = build_change_stats(weekly_stats['total'], previous_weekly_stats['total'])
+        context['monthly_stats'] = monthly_stats
+        context['monthly_change'] = build_change_stats(monthly_stats['total'], previous_monthly_stats['total'])
         context['cash_revenue'] = cash_revenue
         context['card_revenue'] = card_revenue
-        context['employee_rows'] = employee_rows
+        context['top_products'] = SaleItem.objects.filter(
+            sale__status='completed',
+        ).values(
+            'product__name',
+        ).annotate(
+            total_quantity=Sum('quantity'),
+            total_revenue=Sum('total_price'),
+        ).order_by('-total_quantity', '-total_revenue', 'product__name')[:10]
     elif user_role == 'seller':
         active_shift = get_active_shift(request.user)
         last_closed_shift = SellerShift.objects.filter(

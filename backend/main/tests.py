@@ -11,6 +11,7 @@ from .models import (
     Client,
     Product,
     Sale,
+    SaleItem,
     SellerShift,
     TelegramLinkCode,
     TelegramOrder,
@@ -286,12 +287,19 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, 'Yetkazib beruvchi')
         self.assertContains(response, 'Kuryer')
 
-    def test_director_dashboard_focuses_on_employee_control(self):
+    def test_director_dashboard_focuses_on_sales_analytics(self):
         self.client.force_login(self.director)
         response = self.client.get(reverse('dashboard'))
 
-        self.assertContains(response, 'Xodimlar holati')
-        self.assertContains(response, reverse('users'))
+        self.assertContains(response, 'Bugungi savdo')
+        self.assertContains(response, 'Haftalik savdo')
+        self.assertContains(response, 'Oylik savdo')
+        self.assertContains(response, "Eng ko'p sotilayotgan mahsulotlar")
+        self.assertNotContains(response, 'Yangi telegram buyurtmalar')
+        self.assertNotContains(response, 'Sotuvchilar')
+        self.assertNotContains(response, 'Omborchilar')
+        self.assertNotContains(response, 'Yetkazib beruvchilar')
+        self.assertNotContains(response, 'Faol smenalar')
         self.assertNotContains(response, reverse('sales'))
         self.assertNotContains(response, reverse('warehouse'))
 
@@ -425,6 +433,62 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, 'Karta savdolar jami')
         self.assertContains(response, "1500000 so'm", html=False)
         self.assertContains(response, "2200000 so'm", html=False)
+
+    def test_director_dashboard_shows_period_stats_and_top_products(self):
+        now = timezone.now()
+        sale_today = Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=2000000,
+            status='completed',
+            payment_type='cash',
+        )
+        SaleItem.objects.create(
+            sale=sale_today,
+            product=self.product,
+            quantity=3,
+            unit_price=self.product.price,
+            total_price=self.product.price * 3,
+        )
+        Sale.objects.filter(pk=sale_today.pk).update(created_at=now)
+
+        sale_yesterday = Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=1000000,
+            status='completed',
+            payment_type='card',
+        )
+        Sale.objects.filter(pk=sale_yesterday.pk).update(created_at=now - timedelta(days=1))
+
+        sale_last_week = Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=500000,
+            status='completed',
+            payment_type='cash',
+        )
+        Sale.objects.filter(pk=sale_last_week.pk).update(created_at=now - timedelta(days=7))
+
+        sale_last_month = Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=700000,
+            status='completed',
+            payment_type='cash',
+        )
+        Sale.objects.filter(pk=sale_last_month.pk).update(created_at=now - timedelta(days=31))
+
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Bugungi savdo')
+        self.assertContains(response, 'Haftalik savdo')
+        self.assertContains(response, 'Oylik savdo')
+        self.assertContains(response, "Eng ko'p sotilayotgan mahsulotlar")
+        self.assertContains(response, self.product.name)
+        self.assertContains(response, '3 ta sotilgan')
 
     def test_director_can_start_shift_for_seller(self):
         self.client.force_login(self.director)

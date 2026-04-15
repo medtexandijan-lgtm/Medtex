@@ -2,6 +2,77 @@
 
 {% block title %}Boshqaruv paneli - Medical CRM{% endblock %}
 
+{% block extra_css %}
+<style>
+    .director-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    .director-stat-note {
+        margin-top: 8px;
+        color: var(--gray);
+        font-size: 14px;
+    }
+
+    .director-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .director-trend.up {
+        background: rgba(22, 163, 74, 0.12);
+        color: var(--success);
+    }
+
+    .director-trend.down {
+        background: rgba(220, 38, 38, 0.12);
+        color: var(--danger);
+    }
+
+    .director-trend.same {
+        background: rgba(100, 116, 139, 0.12);
+        color: var(--gray);
+    }
+
+    .director-top-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .director-top-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: #f8fafc;
+    }
+
+    .director-top-meta {
+        color: var(--gray);
+        margin-top: 6px;
+        font-size: 14px;
+    }
+
+    .director-top-value {
+        text-align: right;
+        font-weight: 700;
+        color: var(--dark);
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="top-bar">
     <h1 class="page-title">Boshqaruv paneli</h1>
@@ -12,58 +83,81 @@
 
 <div class="page-content">
     {% if request.user.role == 'director' %}
-    <div class="cards-grid">
+    <div class="director-stat-grid">
         <div class="card stat-card">
             <div class="card-icon warning">
-                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 4a1 1 0 0 1 1 1v4.59l2.3 2.29-1.42 1.42L11 13.41V8a1 1 0 0 1 1-1z"/></svg>
             </div>
             <div class="stat-content">
-                <div class="card-value">{{ seller_count }}</div>
-                <div class="card-label">Sotuvchilar</div>
+                <div class="card-value">{{ daily_stats.total|floatformat:0 }} so'm</div>
+                <div class="card-label">Bugungi savdo</div>
+                <div class="director-stat-note">{{ daily_stats.count }} ta sotuv</div>
+                <div class="director-trend {{ daily_change.direction }}">
+                    {% if daily_change.has_baseline %}
+                        {% if daily_change.direction == 'up' %}
+                        +{{ daily_change.percent|floatformat:1 }}%
+                        {% elif daily_change.direction == 'down' %}
+                        -{{ daily_change.percent|floatformat:1 }}%
+                        {% else %}
+                        0.0%
+                        {% endif %}
+                    {% else %}
+                        Oldingi kunda savdo bo'lmagan
+                    {% endif %}
+                </div>
             </div>
         </div>
 
         <div class="card stat-card">
             <div class="card-icon primary">
-                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v3h20V4c0-1.1-.9-2-2-2zm0 7H4v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V9zm-9 9H7v-2h4v2zm6-4H7v-2h10v2z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M7 2v2H3v16h18V4h-4V2h-2v2H9V2H7zm12 6H5v10h14V8zm-8 2h2v3h3v2h-5v-5z"/></svg>
             </div>
             <div class="stat-content">
-                <div class="card-value">{{ warehouse_count }}</div>
-                <div class="card-label">Omborchilar</div>
+                <div class="card-value">{{ weekly_stats.total|floatformat:0 }} so'm</div>
+                <div class="card-label">Haftalik savdo</div>
+                <div class="director-stat-note">{{ weekly_stats.count }} ta sotuv</div>
+                <div class="director-trend {{ weekly_change.direction }}">
+                    {% if weekly_change.has_baseline %}
+                        {% if weekly_change.direction == 'up' %}
+                        +{{ weekly_change.percent|floatformat:1 }}%
+                        {% elif weekly_change.direction == 'down' %}
+                        -{{ weekly_change.percent|floatformat:1 }}%
+                        {% else %}
+                        0.0%
+                        {% endif %}
+                    {% else %}
+                        O'tgan haftada savdo bo'lmagan
+                    {% endif %}
+                </div>
             </div>
         </div>
-        
+
         <div class="card stat-card">
             <div class="card-icon success">
-                <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H1v13h2a3 3 0 0 0 6 0h6a3 3 0 0 0 6 0h2v-5l-3-4zM6 18.5A1.5 1.5 0 1 1 7.5 17 1.5 1.5 0 0 1 6 18.5zM15 15H9a3 3 0 0 0-6 0V6h12zm3.5 3.5A1.5 1.5 0 1 1 20 17a1.5 1.5 0 0 1-1.5 1.5zM17 12V10h2.5l1.5 2z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14h18V6a2 2 0 0 0-2-2zm0 14H5V9h14v9zm-7-7c-1.65 0-3 1.35-3 3h2a1 1 0 1 1 1 1 3 3 0 0 0-3 3h2a1 1 0 1 1 2 0h2a3 3 0 0 0-3-3 3 3 0 0 0 0-6z"/></svg>
             </div>
             <div class="stat-content">
-                <div class="card-value">{{ supplier_count }}</div>
-                <div class="card-label">Yetkazib beruvchilar</div>
-            </div>
-        </div>
-        
-        <div class="card stat-card">
-            <div class="card-icon info">
-                <svg viewBox="0 0 24 24"><path d="M12 1a11 11 0 1 0 11 11A11 11 0 0 0 12 1zm1 11.41V6h-2v7h6v-2z"/></svg>
-            </div>
-            <div class="stat-content">
-                <div class="card-value">{{ open_shift_count }}</div>
-                <div class="card-label">Faol smenalar</div>
+                <div class="card-value">{{ monthly_stats.total|floatformat:0 }} so'm</div>
+                <div class="card-label">Oylik savdo</div>
+                <div class="director-stat-note">{{ monthly_stats.count }} ta sotuv</div>
+                <div class="director-trend {{ monthly_change.direction }}">
+                    {% if monthly_change.has_baseline %}
+                        {% if monthly_change.direction == 'up' %}
+                        +{{ monthly_change.percent|floatformat:1 }}%
+                        {% elif monthly_change.direction == 'down' %}
+                        -{{ monthly_change.percent|floatformat:1 }}%
+                        {% else %}
+                        0.0%
+                        {% endif %}
+                    {% else %}
+                        O'tgan oyda savdo bo'lmagan
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    
-    <div class="cards-grid" style="margin-bottom: 24px;">
-        <div class="card stat-card">
-            <div class="card-icon warning">
-                <svg viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V8h2v4z"/></svg>
-            </div>
-            <div class="stat-content">
-                <div class="card-value">{{ new_orders_count }}</div>
-                <div class="card-label">Yangi telegram buyurtmalar</div>
-            </div>
-        </div>
+
+    <div class="director-stat-grid">
         <div class="card stat-card">
             <div class="card-icon primary">
                 <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H1v13h2a3 3 0 0 0 6 0h6a3 3 0 0 0 6 0h2v-5l-3-4zM6 18.5A1.5 1.5 0 1 1 7.5 17 1.5 1.5 0 0 1 6 18.5zM15 15H9a3 3 0 0 0-6 0V6h12zm3.5 3.5A1.5 1.5 0 1 1 20 17a1.5 1.5 0 0 1-1.5 1.5zM17 12V10h2.5l1.5 2z"/></svg>
@@ -73,6 +167,7 @@
                 <div class="card-label">Faol yetkazib berishlar</div>
             </div>
         </div>
+
         <div class="card stat-card">
             <div class="card-icon success">
                 <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.68 3.74V19h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
@@ -93,49 +188,23 @@
         </div>
     </div>
 
-    <div class="table-container">
-        <div class="table-header">
-            <h3 class="table-title">Xodimlar holati</h3>
-            <a href="{% url 'users' %}" class="btn btn-secondary btn-sm">Foydalanuvchilar</a>
+    <div class="card">
+        <div class="table-header" style="margin-bottom: 20px;">
+            <h3 class="table-title">Eng ko'p sotilayotgan mahsulotlar</h3>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Xodim</th>
-                    <th>Login</th>
-                    <th>Rol</th>
-                    <th>Holat</th>
-                    <th>Izoh</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for employee in employee_rows %}
-                <tr>
-                    <td>{{ employee.name }}</td>
-                    <td>{{ employee.username }}</td>
-                    <td>{{ employee.role_display }}</td>
-                    <td>
-                        <span class="badge badge-{% if employee.is_active %}success{% else %}danger{% endif %}">
-                            {% if employee.is_active %}Faol{% else %}O'chirilgan{% endif %}
-                        </span>
-                    </td>
-                    <td>
-                        {% if employee.active_shift %}
-                        Smena ochiq: {{ employee.active_shift.started_at|date:"d.m.Y H:i" }}
-                        {% else %}
-                        -
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="empty-state">
-                        <p>Hozircha xodimlar yo'q</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="director-top-list">
+            {% for product in top_products %}
+            <div class="director-top-item">
+                <div>
+                    <strong>{{ product.product__name }}</strong>
+                    <div class="director-top-meta">{{ product.total_quantity }} ta sotilgan</div>
+                </div>
+                <div class="director-top-value">{{ product.total_revenue|floatformat:0 }} so'm</div>
+            </div>
+            {% empty %}
+            <div class="kassa-empty">Hozircha tugallangan savdolar yo'q.</div>
+            {% endfor %}
+        </div>
     </div>
     
     {% elif request.user.role == 'seller' %}

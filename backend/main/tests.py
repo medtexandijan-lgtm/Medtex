@@ -387,6 +387,18 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, "To'lov")
         self.assertContains(response, 'Karta')
 
+    def test_kassa_page_renders_cart_script_without_broken_escape_sequences(self):
+        SellerShift.objects.create(seller=self.seller)
+        self.client.force_login(self.seller)
+
+        response = self.client.get(reverse('kassa'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Savatga qo'shish")
+        self.assertContains(response, "Savat hozircha bo'sh.")
+        self.assertContains(response, "0 so'm")
+        self.assertNotContains(response, "\\\\'")
+
     def test_director_dashboard_shows_cash_and_card_revenue_separately(self):
         Sale.objects.create(
             client=None,

@@ -502,8 +502,8 @@
         const renderCart = () => {
             const items = Array.from(cart.values());
             if (!items.length) {
-                cartLinesNode.innerHTML = '<div class="kassa-empty">Savat hozircha bo\\'sh.</div>';
-                cartTotalNode.textContent = '0 so\\'m';
+                cartLinesNode.innerHTML = "<div class=\"kassa-empty\">Savat hozircha bo'sh.</div>";
+                cartTotalNode.textContent = "0 so'm";
                 cartCountNode.textContent = '0 ta';
                 paymentPanelNode.classList.remove('show');
                 rebuildCheckoutInputs();

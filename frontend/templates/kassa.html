@@ -2,6 +2,117 @@
 
 {% block title %}Kassa - Medical CRM{% endblock %}
 
+{% block extra_css %}
+<style>
+    .kassa-categories {
+        display: grid;
+        gap: 18px;
+    }
+
+    .kassa-category {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .kassa-category-summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .kassa-category-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .kassa-category-summary::marker {
+        display: none;
+    }
+
+    .kassa-category-info {
+        min-width: 0;
+    }
+
+    .kassa-category-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 4px;
+    }
+
+    .kassa-category-text {
+        color: var(--gray);
+        margin: 0;
+    }
+
+    .kassa-category-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .kassa-category-arrow {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gray-100);
+        color: var(--dark);
+        font-size: 18px;
+        font-weight: 700;
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .kassa-category[open] .kassa-category-arrow {
+        transform: rotate(180deg);
+        background: rgba(37, 99, 235, 0.12);
+        color: var(--primary);
+    }
+
+    .kassa-category-content {
+        padding: 0 22px 22px;
+        border-top: 1px solid var(--gray-100);
+    }
+
+    .kassa-product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+    }
+
+    @media (max-width: 768px) {
+        .kassa-category-summary {
+            padding: 16px;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .kassa-category-meta {
+            justify-content: space-between;
+        }
+
+        .kassa-category-content {
+            padding: 0 16px 16px;
+        }
+
+        .kassa-product-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="top-bar">
     <h1 class="page-title">Kassa</h1>
@@ -14,40 +125,47 @@
     </div>
     {% endif %}
     {% regroup products by category as category_groups %}
+    <div class="kassa-categories">
     {% for category in category_groups %}
-    <div class="detail-section" style="margin-bottom: 20px;">
-        <div class="table-header" style="padding: 0 0 16px; border-bottom: none;">
-            <div>
-                <h2 class="table-title" style="margin-bottom: 4px;">{{ category.grouper.name }}</h2>
-                <p style="color: var(--gray); margin: 0;">Shu kategoriya ichidagi mavjud mahsulotlar</p>
+    <details class="kassa-category">
+        <summary class="kassa-category-summary">
+            <div class="kassa-category-info">
+                <div class="kassa-category-title">{{ category.grouper.name }}</div>
+                <p class="kassa-category-text">Kategoriya ustiga bosib mahsulotlarni oching</p>
             </div>
-            <span class="badge badge-primary">{{ category.list|length }} ta mahsulot</span>
-        </div>
-        <div class="cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); margin-bottom: 0;">
-            {% for product in category.list %}
-            <div class="card" style="text-align: center;">
-                <h3 style="margin-bottom: 8px;">{{ product.name }}</h3>
-                <p style="color: var(--gray); margin-bottom: 8px;">{{ product.category.name }}</p>
-                <p style="font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
-                    {{ product.price|floatformat:0 }} so'm
-                </p>
-                <p style="margin-bottom: 16px;">
-                    <span class="badge {% if product.stock > 10 %}badge-success{% elif product.stock > 0 %}badge-warning{% else %}badge-danger{% endif %}">
-                        Omborda: {{ product.stock }} {{ product.unit }}
-                    </span>
-                </p>
-                <a href="{% if active_shift %}{% url 'kassa_sell' product.id %}{% else %}#{% endif %}" class="btn btn-primary btn-block {% if not active_shift %}disabled{% endif %}">
-                    Sotish
-                </a>
+            <div class="kassa-category-meta">
+                <span class="badge badge-primary">{{ category.list|length }} ta mahsulot</span>
+                <span class="kassa-category-arrow">⌄</span>
             </div>
-            {% endfor %}
+        </summary>
+        <div class="kassa-category-content">
+            <div class="kassa-product-grid">
+                {% for product in category.list %}
+                <div class="card" style="text-align: center;">
+                    <h3 style="margin-bottom: 8px;">{{ product.name }}</h3>
+                    <p style="color: var(--gray); margin-bottom: 8px;">{{ product.category.name }}</p>
+                    <p style="font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
+                        {{ product.price|floatformat:0 }} so'm
+                    </p>
+                    <p style="margin-bottom: 16px;">
+                        <span class="badge {% if product.stock > 10 %}badge-success{% elif product.stock > 0 %}badge-warning{% else %}badge-danger{% endif %}">
+                            Omborda: {{ product.stock }} {{ product.unit }}
+                        </span>
+                    </p>
+                    <a href="{% if active_shift %}{% url 'kassa_sell' product.id %}{% else %}#{% endif %}" class="btn btn-primary btn-block {% if not active_shift %}disabled{% endif %}">
+                        Sotish
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-    </div>
+    </details>
     {% empty %}
     <div class="empty-state">
         <h3>Mahsulotlar yo'q</h3>
         <p>Hozircha sotish uchun mahsulotlar mavjud emas</p>
     </div>
     {% endfor %}
+    </div>
 </div>
 {% endblock %}

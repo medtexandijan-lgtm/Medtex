@@ -4,106 +4,310 @@
 
 {% block extra_css %}
 <style>
-    .kassa-categories {
+    .kassa-layout {
         display: grid;
-        gap: 18px;
+        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+        gap: 20px;
+        align-items: start;
     }
 
-    .kassa-category {
+    .kassa-browser,
+    .kassa-cart {
         background: var(--white);
         border: 1px solid var(--border);
         border-radius: 20px;
         box-shadow: var(--shadow);
-        overflow: hidden;
     }
 
-    .kassa-category-summary {
+    .kassa-browser {
+        padding: 20px;
+    }
+
+    .kassa-cart {
+        position: sticky;
+        top: 96px;
+        padding: 20px;
+    }
+
+    .kassa-section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .kassa-categories {
+        display: grid;
+        gap: 16px;
+    }
+
+    .kassa-category {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(255, 255, 255, 1) 100%);
+    }
+
+    .kassa-category summary {
         list-style: none;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        padding: 20px 22px;
+        gap: 14px;
+        padding: 18px;
         cursor: pointer;
-        user-select: none;
     }
 
-    .kassa-category-summary::-webkit-details-marker {
+    .kassa-category summary::-webkit-details-marker {
         display: none;
-    }
-
-    .kassa-category-summary::marker {
-        display: none;
-    }
-
-    .kassa-category-info {
-        min-width: 0;
     }
 
     .kassa-category-title {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 700;
         color: var(--dark);
-        margin-bottom: 4px;
     }
 
     .kassa-category-text {
+        margin-top: 4px;
         color: var(--gray);
-        margin: 0;
+        font-size: 14px;
     }
 
     .kassa-category-meta {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         flex-shrink: 0;
     }
 
     .kassa-category-arrow {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border-radius: 12px;
+        background: var(--gray-100);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: var(--gray-100);
-        color: var(--dark);
         font-size: 18px;
         font-weight: 700;
-        transition: transform 0.2s ease, background 0.2s ease;
+        transition: transform 0.2s ease;
     }
 
     .kassa-category[open] .kassa-category-arrow {
         transform: rotate(180deg);
-        background: rgba(37, 99, 235, 0.12);
-        color: var(--primary);
     }
 
     .kassa-category-content {
-        padding: 0 22px 22px;
+        padding: 0 18px 18px;
         border-top: 1px solid var(--gray-100);
     }
 
     .kassa-product-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 18px;
-        margin-top: 18px;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .kassa-product-card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 16px;
+        background: var(--white);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .kassa-product-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .kassa-product-price {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    .kassa-stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 16px;
+        background: #eff6ff;
+        border: 1px solid rgba(37, 99, 235, 0.12);
+    }
+
+    .kassa-stepper button {
+        width: 34px;
+        height: 34px;
+        border: none;
+        border-radius: 10px;
+        background: var(--white);
+        color: var(--primary-dark);
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .kassa-stepper input {
+        width: 42px;
+        border: none;
+        background: transparent;
+        text-align: center;
+        font-weight: 700;
+        font-size: 15px;
+    }
+
+    .kassa-cart-lines {
+        display: grid;
+        gap: 12px;
+        margin: 16px 0;
+    }
+
+    .kassa-cart-line {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+        background: #f8fafc;
+    }
+
+    .kassa-cart-line-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .kassa-cart-line-title {
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .kassa-cart-line-price {
+        font-weight: 800;
+        color: var(--primary-dark);
+        white-space: nowrap;
+    }
+
+    .kassa-cart-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .kassa-cart-stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .kassa-cart-stepper button {
+        width: 30px;
+        height: 30px;
+        border: none;
+        border-radius: 10px;
+        background: var(--white);
+        color: var(--dark);
+        font-size: 17px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .kassa-cart-total {
+        padding: 16px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #eff6ff 0%, #ecfeff 100%);
+        margin-bottom: 16px;
+    }
+
+    .kassa-total-label {
+        color: var(--gray);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 6px;
+    }
+
+    .kassa-total-value {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--dark);
+    }
+
+    .kassa-payment {
+        display: none;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--gray-100);
+    }
+
+    .kassa-payment.show {
+        display: block;
+    }
+
+    .kassa-payment-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .kassa-payment-option {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--white);
+        padding: 14px;
+        text-align: left;
+        cursor: pointer;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .kassa-payment-option:hover {
+        border-color: var(--primary);
+        transform: translateY(-1px);
+    }
+
+    .kassa-empty {
+        padding: 18px;
+        border: 1px dashed var(--gray-300);
+        border-radius: 16px;
+        text-align: center;
+        color: var(--gray);
+    }
+
+    @media (max-width: 1024px) {
+        .kassa-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .kassa-cart {
+            position: static;
+        }
     }
 
     @media (max-width: 768px) {
-        .kassa-category-summary {
+        .kassa-browser,
+        .kassa-cart {
             padding: 16px;
+        }
+
+        .kassa-category summary,
+        .kassa-cart-line-head,
+        .kassa-cart-controls {
             flex-direction: column;
             align-items: stretch;
         }
 
-        .kassa-category-meta {
-            justify-content: space-between;
-        }
-
-        .kassa-category-content {
-            padding: 0 16px 16px;
+        .kassa-payment-options {
+            grid-template-columns: 1fr;
         }
 
         .kassa-product-grid {
@@ -124,48 +328,318 @@
         Kassa orqali sotuv qilish uchun avval smenani boshlang.
     </div>
     {% endif %}
-    {% regroup products by category as category_groups %}
-    <div class="kassa-categories">
-    {% for category in category_groups %}
-    <details class="kassa-category">
-        <summary class="kassa-category-summary">
-            <div class="kassa-category-info">
-                <div class="kassa-category-title">{{ category.grouper.name }}</div>
-                <p class="kassa-category-text">Kategoriya ustiga bosib mahsulotlarni oching</p>
+
+    <div class="kassa-layout">
+        <section class="kassa-browser">
+            <div class="kassa-section-head">
+                <div>
+                    <h2 class="table-title" style="margin-bottom: 4px;">Mahsulot kategoriyalari</h2>
+                    <p style="color: var(--gray); margin: 0;">Kategoriya ustiga bosib mahsulotlarni tanlang va savatga yig'ing.</p>
+                </div>
+                <span class="badge badge-primary">{{ products|length }} ta mahsulot</span>
             </div>
-            <div class="kassa-category-meta">
-                <span class="badge badge-primary">{{ category.list|length }} ta mahsulot</span>
-                <span class="kassa-category-arrow">⌄</span>
-            </div>
-        </summary>
-        <div class="kassa-category-content">
-            <div class="kassa-product-grid">
-                {% for product in category.list %}
-                <div class="card" style="text-align: center;">
-                    <h3 style="margin-bottom: 8px;">{{ product.name }}</h3>
-                    <p style="color: var(--gray); margin-bottom: 8px;">{{ product.category.name }}</p>
-                    <p style="font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
-                        {{ product.price|floatformat:0 }} so'm
-                    </p>
-                    <p style="margin-bottom: 16px;">
-                        <span class="badge {% if product.stock > 10 %}badge-success{% elif product.stock > 0 %}badge-warning{% else %}badge-danger{% endif %}">
-                            Omborda: {{ product.stock }} {{ product.unit }}
-                        </span>
-                    </p>
-                    <a href="{% if active_shift %}{% url 'kassa_sell' product.id %}{% else %}#{% endif %}" class="btn btn-primary btn-block {% if not active_shift %}disabled{% endif %}">
-                        Sotish
-                    </a>
+
+            {% regroup products by category as category_groups %}
+            <div class="kassa-categories">
+                {% for category in category_groups %}
+                <details class="kassa-category">
+                    <summary>
+                        <div>
+                            <div class="kassa-category-title">{{ category.grouper.name }}</div>
+                            <div class="kassa-category-text">Ichida {{ category.list|length }} ta mavjud mahsulot bor</div>
+                        </div>
+                        <div class="kassa-category-meta">
+                            <span class="badge badge-primary">{{ category.list|length }} ta</span>
+                            <span class="kassa-category-arrow">⌄</span>
+                        </div>
+                    </summary>
+                    <div class="kassa-category-content">
+                        <div class="kassa-product-grid">
+                            {% for product in category.list %}
+                            <div class="kassa-product-card">
+                                <div>
+                                    <div class="kassa-product-name">{{ product.name }}</div>
+                                    <p style="color: var(--gray); margin: 8px 0 0;">{{ product.description|default:"Mahsulot tavsifi kiritilmagan." }}</p>
+                                </div>
+                                <div class="kassa-product-price">{{ product.price|floatformat:0 }} so'm</div>
+                                <div>
+                                    <span class="badge {% if product.stock > 10 %}badge-success{% elif product.stock > 0 %}badge-warning{% else %}badge-danger{% endif %}">
+                                        Omborda: {{ product.stock }} {{ product.unit }}
+                                    </span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                    <div class="kassa-stepper">
+                                        <button type="button" data-product-step="down" data-product-id="{{ product.id }}">-</button>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="{{ product.stock }}"
+                                            value="1"
+                                            inputmode="numeric"
+                                            data-product-qty="{{ product.id }}"
+                                        >
+                                        <button type="button" data-product-step="up" data-product-id="{{ product.id }}">+</button>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary"
+                                        data-add-to-cart
+                                        data-product-id="{{ product.id }}"
+                                        data-product-name="{{ product.name }}"
+                                        data-product-price="{{ product.price }}"
+                                        data-product-stock="{{ product.stock }}"
+                                        data-product-unit="{{ product.unit }}"
+                                    >
+                                        Savatga qo'shish
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </details>
+                {% empty %}
+                <div class="kassa-empty">
+                    Hozircha sotish uchun mahsulotlar mavjud emas.
                 </div>
                 {% endfor %}
             </div>
-        </div>
-    </details>
-    {% empty %}
-    <div class="empty-state">
-        <h3>Mahsulotlar yo'q</h3>
-        <p>Hozircha sotish uchun mahsulotlar mavjud emas</p>
-    </div>
-    {% endfor %}
+        </section>
+
+        <aside class="kassa-cart">
+            <div class="kassa-section-head">
+                <div>
+                    <h2 class="table-title" style="margin-bottom: 4px;">Savat</h2>
+                    <p style="color: var(--gray); margin: 0;">Tanlangan mahsulotlar shu yerda boshqariladi.</p>
+                </div>
+                <span class="badge badge-info" id="cart-count">0 ta</span>
+            </div>
+
+            <div id="cart-lines" class="kassa-cart-lines">
+                <div class="kassa-empty">Savat hozircha bo'sh.</div>
+            </div>
+
+            <div class="kassa-cart-total">
+                <div class="kassa-total-label">Jami summa</div>
+                <div class="kassa-total-value" id="cart-total">0 so'm</div>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-block" id="start-checkout" {% if not active_shift %}disabled{% endif %}>
+                Sotishni yakunlash
+            </button>
+
+            <div class="kassa-payment" id="payment-panel">
+                <div style="font-weight: 700; margin-bottom: 6px;">To'lov turini tanlang</div>
+                <p style="color: var(--gray); margin: 0;">Tanlangan to'lov turi bilan savatdagi barcha mahsulotlar sotuvga o'tadi.</p>
+                <div class="kassa-payment-options">
+                    <button type="button" class="kassa-payment-option" data-payment-type="cash">
+                        <strong>Naqd</strong>
+                        <div style="color: var(--gray); margin-top: 4px;">Kassaga naqd pul sifatida tushadi</div>
+                    </button>
+                    <button type="button" class="kassa-payment-option" data-payment-type="card">
+                        <strong>Karta</strong>
+                        <div style="color: var(--gray); margin-top: 4px;">Terminal yoki karta orqali to'lov</div>
+                    </button>
+                </div>
+            </div>
+
+            <form method="post" action="{% url 'kassa_checkout' %}" id="checkout-form" style="display: none;">
+                {% csrf_token %}
+                <input type="hidden" name="payment_type" id="payment-type-input">
+                <div id="checkout-lines"></div>
+            </form>
+        </aside>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const cart = new Map();
+        const cartLinesNode = document.getElementById('cart-lines');
+        const cartTotalNode = document.getElementById('cart-total');
+        const cartCountNode = document.getElementById('cart-count');
+        const paymentPanelNode = document.getElementById('payment-panel');
+        const checkoutTrigger = document.getElementById('start-checkout');
+        const checkoutForm = document.getElementById('checkout-form');
+        const checkoutLinesNode = document.getElementById('checkout-lines');
+        const paymentTypeInput = document.getElementById('payment-type-input');
+
+        if (!cartLinesNode || !cartTotalNode || !cartCountNode || !paymentPanelNode || !checkoutTrigger || !checkoutForm) {
+            return;
+        }
+
+        const formatPrice = (value) => `${Number(value || 0).toLocaleString('uz-UZ')} so'm`;
+
+        const adjustCatalogQty = (productId, delta) => {
+            const qtyInput = document.querySelector(`[data-product-qty="${productId}"]`);
+            if (!qtyInput) {
+                return;
+            }
+            const current = Number(qtyInput.value || 1);
+            const max = Number(qtyInput.max || 1);
+            qtyInput.value = Math.min(max, Math.max(1, current + delta));
+        };
+
+        const rebuildCheckoutInputs = () => {
+            checkoutLinesNode.innerHTML = '';
+            Array.from(cart.values()).forEach((item) => {
+                const productInput = document.createElement('input');
+                productInput.type = 'hidden';
+                productInput.name = 'product_id[]';
+                productInput.value = item.productId;
+                checkoutLinesNode.appendChild(productInput);
+
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'hidden';
+                quantityInput.name = 'quantity[]';
+                quantityInput.value = item.quantity;
+                checkoutLinesNode.appendChild(quantityInput);
+            });
+        };
+
+        const renderCart = () => {
+            const items = Array.from(cart.values());
+            if (!items.length) {
+                cartLinesNode.innerHTML = '<div class="kassa-empty">Savat hozircha bo\\'sh.</div>';
+                cartTotalNode.textContent = '0 so\\'m';
+                cartCountNode.textContent = '0 ta';
+                paymentPanelNode.classList.remove('show');
+                rebuildCheckoutInputs();
+                return;
+            }
+
+            let total = 0;
+            let count = 0;
+            cartLinesNode.innerHTML = '';
+
+            items.forEach((item) => {
+                const lineTotal = item.quantity * item.price;
+                total += lineTotal;
+                count += item.quantity;
+
+                const row = document.createElement('div');
+                row.className = 'kassa-cart-line';
+                row.innerHTML = `
+                    <div class="kassa-cart-line-head">
+                        <div>
+                            <div class="kassa-cart-line-title">${item.name}</div>
+                            <div style="color: var(--gray); margin-top: 4px;">${formatPrice(item.price)} x ${item.quantity} ${item.unit}</div>
+                        </div>
+                        <div class="kassa-cart-line-price">${formatPrice(lineTotal)}</div>
+                    </div>
+                    <div class="kassa-cart-controls">
+                        <div class="kassa-cart-stepper">
+                            <button type="button" data-cart-step="down" data-cart-product="${item.productId}">-</button>
+                            <strong>${item.quantity}</strong>
+                            <button type="button" data-cart-step="up" data-cart-product="${item.productId}">+</button>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" data-remove-product="${item.productId}">Olib tashlash</button>
+                    </div>
+                `;
+                cartLinesNode.appendChild(row);
+            });
+
+            cartTotalNode.textContent = formatPrice(total);
+            cartCountNode.textContent = `${count} ta`;
+            rebuildCheckoutInputs();
+        };
+
+        const upsertCartItem = (item, quantity) => {
+            if (quantity < 1) {
+                cart.delete(item.productId);
+                renderCart();
+                return;
+            }
+            if (quantity > item.stock) {
+                return;
+            }
+            cart.set(item.productId, { ...item, quantity });
+            renderCart();
+        };
+
+        document.querySelectorAll('[data-product-step]').forEach((button) => {
+            button.addEventListener('click', () => {
+                adjustCatalogQty(button.dataset.productId, button.dataset.productStep === 'up' ? 1 : -1);
+            });
+        });
+
+        document.querySelectorAll('[data-add-to-cart]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const productId = Number(button.dataset.productId);
+                const qtyInput = document.querySelector(`[data-product-qty="${productId}"]`);
+                const quantity = Number(qtyInput?.value || 1);
+                const stock = Number(button.dataset.productStock || 0);
+                if (!quantity || quantity < 1 || quantity > stock) {
+                    return;
+                }
+
+                const current = cart.get(productId);
+                const nextQuantity = (current?.quantity || 0) + quantity;
+                if (nextQuantity > stock) {
+                    return;
+                }
+
+                upsertCartItem(
+                    {
+                        productId,
+                        name: button.dataset.productName,
+                        price: Number(button.dataset.productPrice || 0),
+                        stock,
+                        unit: button.dataset.productUnit || 'dona',
+                    },
+                    nextQuantity,
+                );
+                qtyInput.value = 1;
+            });
+        });
+
+        cartLinesNode.addEventListener('click', (event) => {
+            const downButton = event.target.closest('[data-cart-step="down"]');
+            const upButton = event.target.closest('[data-cart-step="up"]');
+            const removeButton = event.target.closest('[data-remove-product]');
+
+            if (removeButton) {
+                cart.delete(Number(removeButton.dataset.removeProduct));
+                renderCart();
+                return;
+            }
+
+            const targetButton = downButton || upButton;
+            if (!targetButton) {
+                return;
+            }
+
+            const productId = Number(targetButton.dataset.cartProduct);
+            const item = cart.get(productId);
+            if (!item) {
+                return;
+            }
+
+            const delta = targetButton.dataset.cartStep === 'up' ? 1 : -1;
+            upsertCartItem(item, item.quantity + delta);
+        });
+
+        checkoutTrigger.addEventListener('click', () => {
+            if (!cart.size || checkoutTrigger.disabled) {
+                return;
+            }
+            paymentPanelNode.classList.add('show');
+            paymentPanelNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+
+        document.querySelectorAll('[data-payment-type]').forEach((button) => {
+            button.addEventListener('click', () => {
+                if (!cart.size) {
+                    return;
+                }
+                paymentTypeInput.value = button.dataset.paymentType;
+                checkoutForm.submit();
+            });
+        });
+
+        renderCart();
+    }());
+</script>
 {% endblock %}

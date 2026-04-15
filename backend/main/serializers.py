@@ -64,6 +64,7 @@ class SaleSerializer(serializers.ModelSerializer):
     seller = UserSummarySerializer(read_only=True)
     shift_id = serializers.IntegerField(source='shift.id', read_only=True)
     items = SaleItemReadSerializer(read_only=True, many=True)
+    payment_type_display = serializers.CharField(source='get_payment_type_display', read_only=True)
 
     class Meta:
         model = Sale
@@ -74,6 +75,8 @@ class SaleSerializer(serializers.ModelSerializer):
             'shift_id',
             'total_amount',
             'status',
+            'payment_type',
+            'payment_type_display',
             'notes',
             'created_at',
             'updated_at',

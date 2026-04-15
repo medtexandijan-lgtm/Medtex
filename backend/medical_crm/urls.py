@@ -15,6 +15,7 @@ urlpatterns = [
     path('shift/end/', views.shift_end, name='shift_end'),
     path('shift/<int:pk>/report/', views.shift_report, name='shift_report'),
     path('kassa/', views.kassa, name='kassa'),
+    path('kassa/checkout/', views.kassa_checkout, name='kassa_checkout'),
     path('kassa/sell/<int:product_id>/', views.kassa_sell, name='kassa_sell'),
     path('users/', views.users_list, name='users'),
     path('users/create/', views.user_create, name='user_create'),

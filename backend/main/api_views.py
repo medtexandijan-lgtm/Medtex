@@ -233,6 +233,7 @@ class SaleListCreateApiView(APIView):
                 shift=active_shift,
                 total_amount=0,
                 status='pending',
+                payment_type='cash',
                 notes=validated.get('notes', ''),
             )
 

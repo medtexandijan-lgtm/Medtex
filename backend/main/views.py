@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 import time
 
 from django.conf import settings
@@ -327,6 +328,102 @@ def kassa(request):
 
 
 @login_required
+@require_POST
+def kassa_checkout(request):
+    if request.user.role != 'seller':
+        messages.error(request, "Sizga bu amal uchun ruxsat yo'q")
+        return redirect('dashboard')
+
+    active_shift = get_active_shift(request.user)
+    if not active_shift:
+        messages.error(request, "Avval smenani boshlang")
+        return redirect('dashboard')
+
+    payment_type = request.POST.get('payment_type', 'cash').strip()
+    valid_payment_types = {choice[0] for choice in Sale.PAYMENT_TYPE_CHOICES}
+    if payment_type not in valid_payment_types:
+        messages.error(request, "To'lov turi noto'g'ri tanlandi")
+        return redirect('kassa')
+
+    product_ids = request.POST.getlist('product_id[]')
+    quantities = request.POST.getlist('quantity[]')
+    if not product_ids or not quantities or len(product_ids) != len(quantities):
+        messages.error(request, "Savat bo'sh yoki noto'g'ri yuborilgan")
+        return redirect('kassa')
+
+    cart_lines = []
+    for product_id, quantity in zip(product_ids, quantities):
+        try:
+            parsed_product_id = int(product_id)
+            parsed_quantity = int(quantity)
+        except (TypeError, ValueError):
+            messages.error(request, "Savatdagi mahsulot ma'lumoti noto'g'ri")
+            return redirect('kassa')
+
+        if parsed_quantity < 1:
+            messages.error(request, "Mahsulot soni 1 dan kichik bo'lishi mumkin emas")
+            return redirect('kassa')
+        cart_lines.append((parsed_product_id, parsed_quantity))
+
+    with transaction.atomic():
+        locked_products = {
+            product.id: product
+            for product in Product.objects.select_for_update().filter(
+                id__in=[product_id for product_id, _ in cart_lines]
+            )
+        }
+        if len(locked_products) != len({product_id for product_id, _ in cart_lines}):
+            messages.error(request, "Tanlangan mahsulotlardan biri topilmadi")
+            return redirect('kassa')
+
+        for product_id, quantity in cart_lines:
+            product = locked_products[product_id]
+            if product.stock < quantity:
+                messages.error(request, f"{product.name} uchun yetarli mahsulot yo'q")
+                return redirect('kassa')
+
+        sale = Sale.objects.create(
+            client=None,
+            seller=request.user,
+            shift=active_shift,
+            total_amount=Decimal('0'),
+            status='completed',
+            payment_type=payment_type,
+        )
+
+        total_amount = Decimal('0')
+        for product_id, quantity in cart_lines:
+            product = locked_products[product_id]
+            line_total = product.price * quantity
+            SaleItem.objects.create(
+                sale=sale,
+                product=product,
+                quantity=quantity,
+                unit_price=product.price,
+                total_price=line_total,
+            )
+            product.stock -= quantity
+            product.save(update_fields=['stock'])
+            WarehouseTransaction.objects.create(
+                product=product,
+                transaction_type='out',
+                quantity=quantity,
+                notes=f"Sotuv #{sale.id} ({sale.get_payment_type_display()}) orqali",
+                created_by=request.user,
+            )
+            total_amount += line_total
+
+        sale.total_amount = total_amount
+        sale.save(update_fields=['total_amount'])
+
+    messages.success(
+        request,
+        f"Sotuv #{sale.id} muvaffaqiyatli yakunlandi. To'lov turi: {sale.get_payment_type_display()}",
+    )
+    return redirect('sale_detail', pk=sale.pk)
+
+
+@login_required
 def kassa_sell(request, product_id):
     if request.user.role != 'seller':
         messages.error(request, "Sizga bu sahifaga kirish ruxsati yo'q")
@@ -358,6 +455,7 @@ def kassa_sell(request, product_id):
                 shift=active_shift,
                 total_amount=total,
                 status='completed',
+                payment_type='cash',
             )
 
             SaleItem.objects.create(
@@ -395,6 +493,14 @@ def dashboard(request):
         open_shift_count = SellerShift.objects.filter(ended_at__isnull=True).count()
         new_orders_count = TelegramOrder.objects.filter(status='new').count()
         active_deliveries_count = TelegramOrder.objects.filter(status__in={'confirmed', 'delivering'}).count()
+        cash_revenue = Sale.objects.filter(
+            status='completed',
+            payment_type='cash',
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+        card_revenue = Sale.objects.filter(
+            status='completed',
+            payment_type='card',
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
         users = User.objects.exclude(role='director')
         active_shift_map = {
             shift.seller_id: shift
@@ -419,6 +525,8 @@ def dashboard(request):
         context['open_shift_count'] = open_shift_count
         context['new_orders_count'] = new_orders_count
         context['active_deliveries_count'] = active_deliveries_count
+        context['cash_revenue'] = cash_revenue
+        context['card_revenue'] = card_revenue
         context['employee_rows'] = employee_rows
     elif user_role == 'seller':
         active_shift = get_active_shift(request.user)
@@ -812,6 +920,7 @@ def sale_create(request):
                 total_amount=0,
                 notes=notes,
                 status='pending',
+                payment_type='cash',
             )
 
             total = 0
@@ -1181,6 +1290,7 @@ def telegram_order_update_status(request, pk):
                 shift=active_shift,
                 total_amount=order.total_amount,
                 status='completed',
+                payment_type='cash',
                 notes=f"Telegram order #{order.id}. {order.comment}".strip(),
             )
 

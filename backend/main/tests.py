@@ -358,9 +358,59 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(sale.client, self.client_obj)
         self.assertEqual(sale.status, 'completed')
+        self.assertEqual(sale.payment_type, 'cash')
         self.assertIsNotNone(sale.shift)
         self.assertEqual(self.product.stock, 8)
         self.assertEqual(WarehouseTransaction.objects.filter(transaction_type='out').count(), 1)
+
+    def test_kassa_checkout_creates_sale_with_selected_payment_type(self):
+        SellerShift.objects.create(seller=self.seller)
+        self.client.force_login(self.seller)
+
+        response = self.client.post(
+            reverse('kassa_checkout'),
+            {
+                'payment_type': 'card',
+                'product_id[]': [str(self.product.id)],
+                'quantity[]': ['2'],
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        sale = Sale.objects.get()
+        self.product.refresh_from_db()
+
+        self.assertEqual(sale.payment_type, 'card')
+        self.assertEqual(sale.total_amount, self.product.price * 2)
+        self.assertEqual(self.product.stock, 8)
+        self.assertContains(response, "To'lov")
+        self.assertContains(response, 'Karta')
+
+    def test_director_dashboard_shows_cash_and_card_revenue_separately(self):
+        Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=1500000,
+            status='completed',
+            payment_type='cash',
+        )
+        Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=2200000,
+            status='completed',
+            payment_type='card',
+        )
+
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Naqd savdolar jami')
+        self.assertContains(response, 'Karta savdolar jami')
+        self.assertContains(response, "1500000 so'm", html=False)
+        self.assertContains(response, "2200000 so'm", html=False)
 
     def test_director_can_start_shift_for_seller(self):
         self.client.force_login(self.director)

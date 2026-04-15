@@ -16,6 +16,7 @@
         <div class="detail-meta">
             <span>Mijoz: {{ sale.client.name|default:"Walk-in mijoz" }}</span>
             <span>Sotuvchi: {{ sale.seller.get_full_name }}</span>
+            <span>To'lov: <span class="badge badge-{% if sale.payment_type == 'card' %}primary{% else %}success{% endif %}">{{ sale.get_payment_type_display }}</span></span>
             <span>Holat: <span class="badge badge-{% if sale.status == 'completed' %}success{% elif sale.status == 'pending' %}warning{% elif sale.status == 'cancelled' %}danger{% else %}info{% endif %}">{{ sale.get_status_display }}</span></span>
         </div>
     </div>

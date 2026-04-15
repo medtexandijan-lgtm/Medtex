@@ -13,29 +13,41 @@
         Kassa orqali sotuv qilish uchun avval smenani boshlang.
     </div>
     {% endif %}
-    <div class="cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
-        {% for product in products %}
-        <div class="card" style="text-align: center;">
-            <h3 style="margin-bottom: 8px;">{{ product.name }}</h3>
-            <p style="color: var(--gray); margin-bottom: 8px;">{{ product.category.name }}</p>
-            <p style="font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
-                {{ product.price|floatformat:0 }} so'm
-            </p>
-            <p style="margin-bottom: 16px;">
-                <span class="badge {% if product.stock > 10 %}badge-success{% elif product.stock > 0 %}badge-warning{% else %}badge-danger{% endif %}">
-                    Omborda: {{ product.stock }} {{ product.unit }}
-                </span>
-            </p>
-            <a href="{% if active_shift %}{% url 'kassa_sell' product.id %}{% else %}#{% endif %}" class="btn btn-primary btn-block {% if not active_shift %}disabled{% endif %}">
-                Sotish
-            </a>
+    {% regroup products by category as category_groups %}
+    {% for category in category_groups %}
+    <div class="detail-section" style="margin-bottom: 20px;">
+        <div class="table-header" style="padding: 0 0 16px; border-bottom: none;">
+            <div>
+                <h2 class="table-title" style="margin-bottom: 4px;">{{ category.grouper.name }}</h2>
+                <p style="color: var(--gray); margin: 0;">Shu kategoriya ichidagi mavjud mahsulotlar</p>
+            </div>
+            <span class="badge badge-primary">{{ category.list|length }} ta mahsulot</span>
         </div>
-        {% empty %}
-        <div class="empty-state" style="grid-column: 1/-1;">
-            <h3>Mahsulotlar yo'q</h3>
-            <p>Hozircha sotish uchun mahsulotlar mavjud emas</p>
+        <div class="cards-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); margin-bottom: 0;">
+            {% for product in category.list %}
+            <div class="card" style="text-align: center;">
+                <h3 style="margin-bottom: 8px;">{{ product.name }}</h3>
+                <p style="color: var(--gray); margin-bottom: 8px;">{{ product.category.name }}</p>
+                <p style="font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
+                    {{ product.price|floatformat:0 }} so'm
+                </p>
+                <p style="margin-bottom: 16px;">
+                    <span class="badge {% if product.stock > 10 %}badge-success{% elif product.stock > 0 %}badge-warning{% else %}badge-danger{% endif %}">
+                        Omborda: {{ product.stock }} {{ product.unit }}
+                    </span>
+                </p>
+                <a href="{% if active_shift %}{% url 'kassa_sell' product.id %}{% else %}#{% endif %}" class="btn btn-primary btn-block {% if not active_shift %}disabled{% endif %}">
+                    Sotish
+                </a>
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
+    {% empty %}
+    <div class="empty-state">
+        <h3>Mahsulotlar yo'q</h3>
+        <p>Hozircha sotish uchun mahsulotlar mavjud emas</p>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}

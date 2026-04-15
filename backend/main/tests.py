@@ -397,6 +397,8 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, "Savatga qo'shish")
         self.assertContains(response, "Savat hozircha bo'sh.")
         self.assertContains(response, "0 so'm")
+        self.assertContains(response, 'data-product-price="1500000.00"', html=False)
+        self.assertContains(response, 'const parsePrice = (value) => {', html=False)
         self.assertNotContains(response, "\\\\'")
 
     def test_director_dashboard_shows_cash_and_card_revenue_separately(self):

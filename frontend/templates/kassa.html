@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Kassa - Medical CRM{% endblock %}
 
@@ -386,7 +387,7 @@
                                         data-add-to-cart
                                         data-product-id="{{ product.id }}"
                                         data-product-name="{{ product.name }}"
-                                        data-product-price="{{ product.price }}"
+                                        data-product-price="{{ product.price|unlocalize }}"
                                         data-product-stock="{{ product.stock }}"
                                         data-product-unit="{{ product.unit }}"
                                     >
@@ -470,7 +471,18 @@
             return;
         }
 
-        const formatPrice = (value) => `${Number(value || 0).toLocaleString('uz-UZ')} so'm`;
+        const parsePrice = (value) => {
+            if (typeof value === 'number') {
+                return Number.isFinite(value) ? value : 0;
+            }
+            const normalized = String(value || '')
+                .replace(/\s/g, '')
+                .replace(',', '.');
+            const parsed = Number(normalized);
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+
+        const formatPrice = (value) => `${parsePrice(value).toLocaleString('uz-UZ')} so'm`;
 
         const adjustCatalogQty = (productId, delta) => {
             const qtyInput = document.querySelector(`[data-product-qty="${productId}"]`);
@@ -515,7 +527,7 @@
             cartLinesNode.innerHTML = '';
 
             items.forEach((item) => {
-                const lineTotal = item.quantity * item.price;
+                const lineTotal = item.quantity * parsePrice(item.price);
                 total += lineTotal;
                 count += item.quantity;
 
@@ -585,7 +597,7 @@
                     {
                         productId,
                         name: button.dataset.productName,
-                        price: Number(button.dataset.productPrice || 0),
+                        price: parsePrice(button.dataset.productPrice),
                         stock,
                         unit: button.dataset.productUnit || 'dona',
                     },

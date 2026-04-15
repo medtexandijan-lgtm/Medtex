@@ -11,7 +11,13 @@
 <body>
     {% if request.user.is_authenticated %}
     <div class="layout">
-        <aside class="sidebar">
+        <button class="sidebar-toggle" type="button" aria-label="Menyuni ochish" aria-expanded="false" aria-controls="sidebar">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <button class="mobile-overlay" type="button" aria-label="Menyuni yopish"></button>
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     <div class="sidebar-logo-icon">
@@ -116,6 +122,61 @@
     {% block login_content %}{% endblock %}
     {% endif %}
     
+    {% if request.user.is_authenticated %}
+    <script>
+        (function () {
+            const layout = document.querySelector('.layout');
+            const sidebar = document.querySelector('.sidebar');
+            const toggle = document.querySelector('.sidebar-toggle');
+            const overlay = document.querySelector('.mobile-overlay');
+            const desktopBreakpoint = window.matchMedia('(min-width: 769px)');
+
+            if (!layout || !sidebar || !toggle || !overlay) {
+                return;
+            }
+
+            const setSidebarState = (open) => {
+                layout.classList.toggle('sidebar-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            };
+
+            toggle.addEventListener('click', () => {
+                setSidebarState(!layout.classList.contains('sidebar-open'));
+            });
+
+            overlay.addEventListener('click', () => setSidebarState(false));
+
+            sidebar.querySelectorAll('a').forEach((link) => {
+                link.addEventListener('click', () => {
+                    if (!desktopBreakpoint.matches) {
+                        setSidebarState(false);
+                    }
+                });
+            });
+
+            desktopBreakpoint.addEventListener('change', (event) => {
+                if (event.matches) {
+                    setSidebarState(false);
+                }
+            });
+
+            const enhanceResponsiveTables = () => {
+                document.querySelectorAll('.table-container table').forEach((table) => {
+                    const headers = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+                    table.querySelectorAll('tbody tr').forEach((row) => {
+                        Array.from(row.children).forEach((cell, index) => {
+                            if (!cell.getAttribute('data-label') && headers[index]) {
+                                cell.setAttribute('data-label', headers[index]);
+                            }
+                        });
+                    });
+                });
+            };
+
+            enhanceResponsiveTables();
+        }());
+    </script>
+    {% endif %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>

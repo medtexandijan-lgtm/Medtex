@@ -767,6 +767,7 @@ class CRMFlowTests(TestCase):
         self.assertTrue(payload['token'])
         self.assertTrue(TelegramProfile.objects.filter(chat_id=777999, chat_username='unsafe_user').exists())
 
+    @override_settings(APP_BASE_URL='https://crm.example.com')
     def test_bot_menu_uses_signed_launch_token_for_mini_app(self):
         markup = build_main_menu_markup(
             {

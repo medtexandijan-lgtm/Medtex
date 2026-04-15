@@ -968,6 +968,14 @@ class CRMFlowTests(TestCase):
         web_app_url = markup['keyboard'][0][0]['web_app']['url']
         self.assertIn('/mini-app/?launch=', web_app_url)
 
+    def test_mini_app_page_uses_category_first_catalog_flow(self):
+        response = self.client.get(reverse('mini_app'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="catalog-back"', html=False)
+        self.assertContains(response, 'selectedCategoryName =', html=False)
+        self.assertContains(response, "Avval kategoriyani tanlang", html=False)
+
     @override_settings(TELEGRAM_BOT_TOKEN='test-token')
     @patch('main.views.validate_init_data')
     def test_mini_app_can_create_order(self, mock_validate):

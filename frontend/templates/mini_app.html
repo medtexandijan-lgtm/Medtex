@@ -206,6 +206,69 @@
             gap: 14px;
         }
 
+        .mini-catalog-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .mini-back-button {
+            display: none;
+        }
+
+        .mini-back-button.show {
+            display: inline-flex;
+        }
+
+        .mini-category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .mini-category-card {
+            border: 1px solid rgba(226, 232, 240, 0.92);
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+            box-shadow: 0 14px 26px -24px rgba(15, 23, 42, 0.45);
+            padding: 18px;
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .mini-category-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(14, 165, 233, 0.4);
+            box-shadow: 0 20px 32px -24px rgba(14, 165, 233, 0.35);
+        }
+
+        .mini-category-card-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--mini-navy);
+            margin-bottom: 8px;
+        }
+
+        .mini-category-card-copy {
+            color: var(--mini-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        .mini-category-card-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            color: #075985;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
         .mini-category-block {
             padding: 18px;
             border-radius: 24px;
@@ -720,9 +783,12 @@
                 <div class="mini-section-head">
                     <div>
                         <div class="mini-section-title">Mahsulotlar katalogi</div>
-                        <div class="mini-section-subtitle">Qoldiq va narx ko'rinib turadi, sonni shu yerning o'zida belgilang.</div>
+                        <div class="mini-section-subtitle" id="catalog-subtitle">Avval kategoriyani tanlang, keyin mahsulotni savatga qo'shing.</div>
                     </div>
                     <div class="mini-chip" id="product-stock-summary">Yuklanmoqda...</div>
+                </div>
+                <div class="mini-catalog-toolbar">
+                    <button class="btn btn-secondary mini-back-button" type="button" id="catalog-back">Kategoriyalarga qaytish</button>
                 </div>
                 <div class="mini-products" id="products"></div>
             </section>
@@ -832,9 +898,12 @@
         const summaryCartNode = document.getElementById('summary-cart');
         const productStockSummaryNode = document.getElementById('product-stock-summary');
         const cartBadgeNode = document.getElementById('cart-badge');
+        const catalogSubtitleNode = document.getElementById('catalog-subtitle');
+        const catalogBackNode = document.getElementById('catalog-back');
         const cart = new Map();
         let authToken = '';
         let products = [];
+        let selectedCategoryName = '';
         let selectedLocation = null;
         let pendingLocation = null;
         let map = null;
@@ -864,7 +933,14 @@
             const itemCount = Array.from(cart.values()).reduce((sum, item) => sum + item.quantity, 0);
             summaryProductsNode.textContent = `${products.length} ta mahsulot`;
             summaryCartNode.textContent = `${itemCount} ta birlik`;
-            productStockSummaryNode.textContent = `${products.filter((product) => product.stock > 0).length} ta aktiv pozitsiya`;
+            const groupedCategories = groupProductsByCategory(products);
+            if (selectedCategoryName) {
+                const selectedCategory = groupedCategories.find((category) => category.name === selectedCategoryName);
+                const categoryProducts = selectedCategory ? selectedCategory.products : [];
+                productStockSummaryNode.textContent = `${categoryProducts.filter((product) => product.stock > 0).length} ta aktiv mahsulot`;
+            } else {
+                productStockSummaryNode.textContent = `${groupedCategories.length} ta kategoriya`;
+            }
             cartBadgeNode.textContent = itemCount;
         }
 
@@ -901,88 +977,132 @@
             productsNode.innerHTML = '';
             if (!products.length) {
                 productsNode.innerHTML = '<div class="mini-empty">Mahsulot topilmadi.</div>';
+                catalogSubtitleNode.textContent = "Hozircha katalog bo'sh.";
+                catalogBackNode.classList.remove('show');
                 updateSummary();
                 return;
             }
 
-            groupProductsByCategory(products).forEach((category) => {
-                const section = document.createElement('section');
-                section.className = 'mini-category-block';
-                section.innerHTML = `
-                    <div class="mini-category-head">
-                        <div>
-                            <div class="mini-category-title">${category.name}</div>
-                            <div class="mini-category-subtitle">Shu bo'limdagi mavjud mahsulotlar</div>
-                        </div>
-                        <span class="mini-chip">${category.products.length} ta mahsulot</span>
-                    </div>
-                    <div class="mini-category-products"></div>
-                `;
+            const categories = groupProductsByCategory(products);
 
-                const categoryProductsNode = section.querySelector('.mini-category-products');
+            if (!selectedCategoryName) {
+                catalogSubtitleNode.textContent = "Avval kategoriyani tanlang, keyin mahsulotni savatga qo'shing.";
+                catalogBackNode.classList.remove('show');
 
-                category.products.forEach((product) => {
-                    const card = document.createElement('div');
-                    card.className = 'mini-product';
-                    card.innerHTML = `
-                        <div class="mini-product-head">
-                            <div>
-                                <div class="mini-product-name">${product.name}</div>
-                                <div class="mini-product-meta">
-                                    <span class="badge badge-primary">${category.name}</span>
-                                    <span class="mini-meta-pill">Qoldiq: ${product.stock} ${product.unit}</span>
-                                    <span class="mini-meta-pill">Birlik: ${product.unit}</span>
-                                </div>
-                                <div class="mini-product-description">${product.description || 'Mahsulot bo\'yicha qo\'shimcha tavsif kiritilmagan.'}</div>
-                            </div>
-                            <div class="mini-price">${formatPrice(product.price)} so'm</div>
-                        </div>
-                        <div class="mini-product-actions">
-                            <div class="mini-stepper">
-                                <button class="mini-stepper-btn" type="button" data-step="down">-</button>
-                                <input class="mini-stepper-value" data-qty-for="${product.id}" type="number" min="1" max="${product.stock}" value="1" inputmode="numeric" style="border:none;background:transparent;padding:0;">
-                                <button class="mini-stepper-btn" type="button" data-step="up">+</button>
-                            </div>
-                            <button class="btn btn-primary" type="button">Savatga qo'shish</button>
+                const categoryGrid = document.createElement('div');
+                categoryGrid.className = 'mini-category-grid';
+
+                categories.forEach((category) => {
+                    const categoryCard = document.createElement('button');
+                    categoryCard.type = 'button';
+                    categoryCard.className = 'mini-category-card';
+                    categoryCard.innerHTML = `
+                        <div class="mini-category-card-title">${category.name}</div>
+                        <div class="mini-category-card-copy">Kerakli mahsulotlarni shu bo'lim ichidan tanlaysiz.</div>
+                        <div class="mini-category-card-meta">
+                            <span>${category.products.length} ta mahsulot</span>
+                            <span>Ochish</span>
                         </div>
                     `;
-
-                    const qtyInput = card.querySelector(`[data-qty-for="${product.id}"]`);
-                    const addButton = card.querySelector('.btn');
-                    const stepDown = card.querySelector('[data-step="down"]');
-                    const stepUp = card.querySelector('[data-step="up"]');
-
-                    stepDown.addEventListener('click', () => changeQty(product.id, -1));
-                    stepUp.addEventListener('click', () => changeQty(product.id, 1));
-
-                    addButton.addEventListener('click', () => {
-                        const quantity = Number(qtyInput.value || 1);
-                        if (!quantity || quantity < 1) {
-                            setMessage("Mahsulot soni noto'g'ri.", 'error');
-                            return;
-                        }
-                        if (quantity > Number(product.stock)) {
-                            setMessage("Tanlangan son ombordagi qoldiqdan katta.", 'error');
-                            return;
-                        }
-
-                        clearMessage();
-                        cart.set(product.id, {
-                            product_id: product.id,
-                            name: product.name,
-                            quantity,
-                            unit_price: Number(product.price),
-                            unit: product.unit,
-                        });
-                        renderCart();
+                    categoryCard.addEventListener('click', () => {
+                        selectedCategoryName = category.name;
+                        renderProducts();
                         tg?.HapticFeedback?.impactOccurred('light');
                     });
-
-                    categoryProductsNode.appendChild(card);
+                    categoryGrid.appendChild(categoryCard);
                 });
 
-                productsNode.appendChild(section);
+                productsNode.appendChild(categoryGrid);
+                updateSummary();
+                return;
+            }
+
+            const activeCategory = categories.find((category) => category.name === selectedCategoryName);
+            if (!activeCategory) {
+                selectedCategoryName = '';
+                renderProducts();
+                return;
+            }
+
+            catalogSubtitleNode.textContent = `${activeCategory.name} kategoriyasidagi mahsulotlar`;
+            catalogBackNode.classList.add('show');
+
+            const section = document.createElement('section');
+            section.className = 'mini-category-block';
+            section.innerHTML = `
+                <div class="mini-category-head">
+                    <div>
+                        <div class="mini-category-title">${activeCategory.name}</div>
+                        <div class="mini-category-subtitle">Shu bo'limdagi mavjud mahsulotlar</div>
+                    </div>
+                    <span class="mini-chip">${activeCategory.products.length} ta mahsulot</span>
+                </div>
+                <div class="mini-category-products"></div>
+            `;
+
+            const categoryProductsNode = section.querySelector('.mini-category-products');
+
+            activeCategory.products.forEach((product) => {
+                const card = document.createElement('div');
+                card.className = 'mini-product';
+                card.innerHTML = `
+                    <div class="mini-product-head">
+                        <div>
+                            <div class="mini-product-name">${product.name}</div>
+                            <div class="mini-product-meta">
+                                <span class="badge badge-primary">${activeCategory.name}</span>
+                                <span class="mini-meta-pill">Qoldiq: ${product.stock} ${product.unit}</span>
+                                <span class="mini-meta-pill">Birlik: ${product.unit}</span>
+                            </div>
+                            <div class="mini-product-description">${product.description || 'Mahsulot bo\'yicha qo\'shimcha tavsif kiritilmagan.'}</div>
+                        </div>
+                        <div class="mini-price">${formatPrice(product.price)} so'm</div>
+                    </div>
+                    <div class="mini-product-actions">
+                        <div class="mini-stepper">
+                            <button class="mini-stepper-btn" type="button" data-step="down">-</button>
+                            <input class="mini-stepper-value" data-qty-for="${product.id}" type="number" min="1" max="${product.stock}" value="1" inputmode="numeric" style="border:none;background:transparent;padding:0;">
+                            <button class="mini-stepper-btn" type="button" data-step="up">+</button>
+                        </div>
+                        <button class="btn btn-primary" type="button">Savatga qo'shish</button>
+                    </div>
+                `;
+
+                const qtyInput = card.querySelector(`[data-qty-for="${product.id}"]`);
+                const addButton = card.querySelector('.btn');
+                const stepDown = card.querySelector('[data-step="down"]');
+                const stepUp = card.querySelector('[data-step="up"]');
+
+                stepDown.addEventListener('click', () => changeQty(product.id, -1));
+                stepUp.addEventListener('click', () => changeQty(product.id, 1));
+
+                addButton.addEventListener('click', () => {
+                    const quantity = Number(qtyInput.value || 1);
+                    if (!quantity || quantity < 1) {
+                        setMessage("Mahsulot soni noto'g'ri.", 'error');
+                        return;
+                    }
+                    if (quantity > Number(product.stock)) {
+                        setMessage("Tanlangan son ombordagi qoldiqdan katta.", 'error');
+                        return;
+                    }
+
+                    clearMessage();
+                    cart.set(product.id, {
+                        product_id: product.id,
+                        name: product.name,
+                        quantity,
+                        unit_price: Number(product.price),
+                        unit: product.unit,
+                    });
+                    renderCart();
+                    tg?.HapticFeedback?.impactOccurred('light');
+                });
+
+                categoryProductsNode.appendChild(card);
             });
+
+            productsNode.appendChild(section);
 
             updateSummary();
         }
@@ -1286,6 +1406,10 @@
         });
 
         pickLocationButton.addEventListener('click', openMapModal);
+        catalogBackNode.addEventListener('click', () => {
+            selectedCategoryName = '';
+            renderProducts();
+        });
         closeMapButton.addEventListener('click', closeMapModal);
         cancelMapButton.addEventListener('click', closeMapModal);
         confirmMapButton.addEventListener('click', () => {

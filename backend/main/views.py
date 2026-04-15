@@ -526,7 +526,7 @@ def user_delete(request, pk):
 
 @login_required
 def categories_list(request):
-    if request.user.role in {'director', 'seller', 'warehouse', 'supplier'}:
+    if request.user.role in {'director', 'seller', 'supplier'}:
         messages.error(request, "Siz uchun kategoriyalar bo'limi yopilgan")
         return redirect('dashboard')
 
@@ -1562,4 +1562,3 @@ def telegram_webhook(request):
 
     process_update(update)
     return JsonResponse({'ok': True})
-

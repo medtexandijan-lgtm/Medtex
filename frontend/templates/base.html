@@ -84,9 +84,21 @@
                 {% if request.user.role == 'warehouse' %}
                 <div class="nav-section">
                     <div class="nav-section-title">Ombor</div>
+                    <a href="{% url 'products' %}" class="nav-item {% if '/products' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M20 7 12 3 4 7l8 4 8-4zm-8 6L4 9v8l8 4 8-4V9l-8 4z"/></svg>
+                        <span>Mahsulotlar</span>
+                    </a>
+                    <a href="{% url 'categories' %}" class="nav-item {% if '/categories' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M10 4H4v6h6V4zm10 0h-8v6h8V4zM10 14H4v6h6v-6zm10 0h-8v6h8v-6z"/></svg>
+                        <span>Kategoriyalar</span>
+                    </a>
                     <a href="{% url 'warehouse' %}" class="nav-item {% if '/warehouse' in request.path %}active{% endif %}">
                         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
                         <span>Ombor</span>
+                    </a>
+                    <a href="{% url 'transactions' %}" class="nav-item {% if '/transactions' in request.path %}active{% endif %}">
+                        <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 8.95 10h-2.02A7 7 0 1 1 13 5v4l5-5-5-5v4zm-1 6v5l4.28 2.54 1-1.73-3.28-1.95V9H12z"/></svg>
+                        <span>Tranzaksiyalar</span>
                     </a>
                 </div>
                 {% endif %}

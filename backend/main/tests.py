@@ -96,10 +96,25 @@ class CRMFlowTests(TestCase):
         response = self.client.get(reverse('clients'))
         self.assertRedirects(response, reverse('dashboard'))
 
-    def test_warehouse_cannot_open_categories_page(self):
+    def test_warehouse_can_open_categories_page(self):
         self.client.force_login(self.warehouse_user)
         response = self.client.get(reverse('categories'))
-        self.assertRedirects(response, reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kategoriya qo'shish")
+
+    def test_warehouse_can_open_products_page(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.get(reverse('products'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Mahsulot qo'shish")
+
+    def test_warehouse_dashboard_shows_quick_product_actions(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('product_create'))
+        self.assertContains(response, reverse('category_create'))
+        self.assertContains(response, reverse('transactions'))
 
     def test_warehouse_cannot_open_sales_page(self):
         self.client.force_login(self.warehouse_user)
@@ -611,6 +626,25 @@ class CRMFlowTests(TestCase):
 
         self.assertEqual(self.product.stock, 10)
         self.assertContains(response, "yetarli qoldiq yo&#x27;q", html=False)
+
+    def test_warehouse_can_create_product(self):
+        self.client.force_login(self.warehouse_user)
+        response = self.client.post(
+            reverse('product_create'),
+            {
+                'name': 'Infuzion nasos',
+                'category': str(self.category.id),
+                'description': 'Yangi mahsulot',
+                'price': '3200000',
+                'stock': '5',
+                'unit': 'dona',
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Product.objects.filter(name='Infuzion nasos', stock=5).exists())
+        self.assertContains(response, 'Mahsulot muvaffaqiyatli yaratildi')
 
     @override_settings(APP_BASE_URL='https://crm.example.com')
     def test_start_menu_markup_contains_web_app_and_shortcuts(self):

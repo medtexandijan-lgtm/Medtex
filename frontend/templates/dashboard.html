@@ -256,11 +256,29 @@
             </div>
         </div>
     </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header" style="margin-bottom: 20px;">
+            <div>
+                <h3 style="margin-bottom: 6px;">Tezkor amallar</h3>
+                <p style="color: var(--gray); margin: 0;">Mahsulot, kategoriya va ombor operatsiyalarini shu yerdan boshlang.</p>
+            </div>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'product_create' %}" class="btn btn-primary">Mahsulot qo'shish</a>
+            <a href="{% url 'category_create' %}" class="btn btn-secondary">Kategoriya qo'shish</a>
+            <a href="{% url 'warehouse_transaction' %}" class="btn btn-secondary">Operatsiya qo'shish</a>
+            <a href="{% url 'transactions' %}" class="btn btn-secondary">Tarixni ko'rish</a>
+        </div>
+    </div>
     
     <div class="table-container">
         <div class="table-header">
             <h3 class="table-title">Oxirgi operatsiyalar</h3>
-            <a href="{% url 'warehouse_transaction' %}" class="btn btn-primary btn-sm">Yangi operatsiya</a>
+            <div class="table-actions">
+                <a href="{% url 'transactions' %}" class="btn btn-secondary btn-sm">Barcha tarix</a>
+                <a href="{% url 'warehouse_transaction' %}" class="btn btn-primary btn-sm">Yangi operatsiya</a>
+            </div>
         </div>
         <table>
             <thead>

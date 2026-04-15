@@ -2,6 +2,89 @@
 
 {% block title %}Hisobotlar - Medical CRM{% endblock %}
 
+{% block extra_css %}
+<style>
+    .reports-filter-form {
+        display: flex;
+        align-items: end;
+        gap: 16px;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .reports-filter-form .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        min-width: 180px;
+    }
+
+    .reports-filter-form input.form-control,
+    .reports-filter-form select.form-control {
+        min-width: 180px;
+    }
+
+    .reports-chart {
+        display: grid;
+        gap: 14px;
+    }
+
+    .reports-chart-row {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr) 120px;
+        gap: 14px;
+        align-items: center;
+    }
+
+    .reports-chart-label {
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .reports-chart-track {
+        position: relative;
+        height: 14px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .reports-chart-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 100%);
+    }
+
+    .reports-chart-value {
+        text-align: right;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--gray);
+    }
+
+    @media (max-width: 768px) {
+        .reports-filter-form {
+            align-items: stretch;
+        }
+
+        .reports-filter-form .filter-group,
+        .reports-filter-form input.form-control,
+        .reports-filter-form select.form-control {
+            min-width: 100%;
+        }
+
+        .reports-chart-row {
+            grid-template-columns: 1fr;
+        }
+
+        .reports-chart-value {
+            text-align: left;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="top-bar">
     <h1 class="page-title">Hisobotlar</h1>
@@ -132,6 +215,47 @@
         </table>
     </div>
     {% else %}
+    <div class="filter-bar" style="margin-bottom: 24px;">
+        <form method="get" class="reports-filter-form">
+            <div class="filter-group">
+                <label class="filter-label" for="date_from">Sana boshi</label>
+                <input type="date" id="date_from" name="date_from" class="form-control" value="{{ selected_date_from }}">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="date_to">Sana oxiri</label>
+                <input type="date" id="date_to" name="date_to" class="form-control" value="{{ selected_date_to }}">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="seller">Sotuvchi</label>
+                <select id="seller" name="seller" class="form-control">
+                    <option value="">Barchasi</option>
+                    {% for seller in seller_options %}
+                    <option value="{{ seller.id }}" {% if selected_seller == seller.id|stringformat:"s" %}selected{% endif %}>
+                        {{ seller.get_full_name|default:seller.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="category">Kategoriya</label>
+                <select id="category" name="category" class="form-control">
+                    <option value="">Barchasi</option>
+                    {% for category in category_options %}
+                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-primary">Filtrlash</button>
+            </div>
+            <div class="filter-group">
+                <a href="{% url 'reports' %}" class="btn btn-secondary">Tozalash</a>
+            </div>
+        </form>
+    </div>
+
     <div class="cards-grid">
         <div class="card stat-card">
             <div class="card-icon success">
@@ -190,6 +314,29 @@
             <div class="stat-content">
                 <div class="card-value">{{ daily_card_total|floatformat:0 }} so'm</div>
                 <div class="card-label">Bugungi karta savdo</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container" style="margin-bottom: 24px;">
+        <div class="table-header">
+            <h3 class="table-title">Kunlik tushum grafigi</h3>
+        </div>
+        <div style="padding: 24px;">
+            <div class="reports-chart">
+                {% for row in sales_chart_rows %}
+                <div class="reports-chart-row">
+                    <div class="reports-chart-label">{{ row.label }}</div>
+                    <div class="reports-chart-track">
+                        <div class="reports-chart-fill" style="width: {{ row.width_percent }}%;"></div>
+                    </div>
+                    <div class="reports-chart-value">{{ row.total|floatformat:0 }} so'm</div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <p>Tanlangan filter bo'yicha grafik ma'lumoti yo'q</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>

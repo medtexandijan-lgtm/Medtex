@@ -515,6 +515,88 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, "1800000 so'm", html=False)
         self.assertContains(response, "950000 so'm", html=False)
 
+    def test_director_reports_filters_by_date_seller_and_category(self):
+        second_seller = User.objects.create_user(
+            username='seller_two',
+            password='testpass123',
+            role='seller',
+            first_name='Ikkinchi',
+        )
+        second_category = Category.objects.create(name='Rentgen')
+        second_product = Product.objects.create(
+            name='Rentgen apparati',
+            category=second_category,
+            price=3000000,
+            stock=4,
+            unit='dona',
+        )
+
+        now = timezone.now()
+        matching_sale = Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=self.product.price,
+            status='completed',
+            payment_type='cash',
+        )
+        SaleItem.objects.create(
+            sale=matching_sale,
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=self.product.price,
+        )
+        Sale.objects.filter(pk=matching_sale.pk).update(created_at=now)
+
+        other_seller_sale = Sale.objects.create(
+            client=None,
+            seller=second_seller,
+            total_amount=3000000,
+            status='completed',
+            payment_type='card',
+        )
+        SaleItem.objects.create(
+            sale=other_seller_sale,
+            product=second_product,
+            quantity=1,
+            unit_price=second_product.price,
+            total_price=3000000,
+        )
+        Sale.objects.filter(pk=other_seller_sale.pk).update(created_at=now)
+
+        old_sale = Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=500000,
+            status='completed',
+            payment_type='cash',
+        )
+        SaleItem.objects.create(
+            sale=old_sale,
+            product=self.product,
+            quantity=1,
+            unit_price=self.product.price,
+            total_price=500000,
+        )
+        Sale.objects.filter(pk=old_sale.pk).update(created_at=now - timedelta(days=2))
+
+        self.client.force_login(self.director)
+        response = self.client.get(
+            reverse('reports'),
+            {
+                'date_from': now.date().isoformat(),
+                'date_to': now.date().isoformat(),
+                'seller': str(self.seller.id),
+                'category': str(self.category.id),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1500000 so'm", html=False)
+        self.assertContains(response, 'EKG apparati')
+        self.assertNotContains(response, 'Rentgen apparati')
+        self.assertContains(response, 'value="%s"' % now.date().isoformat(), html=False)
+
     def test_director_can_start_shift_for_seller(self):
         self.client.force_login(self.director)
         response = self.client.post(reverse('seller_shift_start', args=[self.seller.id]))

@@ -10,11 +10,13 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.db import models, transaction
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from .forms import (
     CategoryForm,
@@ -128,6 +130,13 @@ def build_payment_totals_for_period(start_date, end_date):
     return {
         'cash_total': sales.filter(payment_type='cash').aggregate(total=Sum('total_amount'))['total'] or Decimal('0'),
         'card_total': sales.filter(payment_type='card').aggregate(total=Sum('total_amount'))['total'] or Decimal('0'),
+    }
+
+
+def build_payment_totals_from_queryset(queryset):
+    return {
+        'cash_total': queryset.filter(payment_type='cash').aggregate(total=Sum('total_amount'))['total'] or Decimal('0'),
+        'card_total': queryset.filter(payment_type='card').aggregate(total=Sum('total_amount'))['total'] or Decimal('0'),
     }
 
 
@@ -1144,20 +1153,52 @@ def reports(request):
         return render(request, 'reports.html', context)
 
     today = timezone.now().date()
-    total_revenue = Sale.objects.filter(status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    total_sales = Sale.objects.filter(status='completed').count()
+    date_from = parse_date((request.GET.get('date_from') or '').strip())
+    date_to = parse_date((request.GET.get('date_to') or '').strip())
+    seller_id = (request.GET.get('seller') or '').strip()
+    category_id = (request.GET.get('category') or '').strip()
+
+    filtered_sales = Sale.objects.filter(status='completed').select_related('seller')
+    if date_from:
+        filtered_sales = filtered_sales.filter(created_at__date__gte=date_from)
+    if date_to:
+        filtered_sales = filtered_sales.filter(created_at__date__lte=date_to)
+    if seller_id:
+        filtered_sales = filtered_sales.filter(seller_id=seller_id)
+    if category_id:
+        filtered_sale_ids = SaleItem.objects.filter(product__category_id=category_id).values('sale_id')
+        filtered_sales = filtered_sales.filter(id__in=filtered_sale_ids)
+
+    total_revenue = filtered_sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_sales = filtered_sales.count()
     total_clients = Client.objects.count()
     total_products = Product.objects.count()
-    daily_payment_totals = build_payment_totals_for_period(today, today)
+    payment_totals = build_payment_totals_from_queryset(filtered_sales)
 
-    sales_by_month = Sale.objects.filter(status='completed').extra(
-        select={'month': "strftime('%%Y-%%m', created_at)"}
-    ).values('month').annotate(total=Sum('total_amount')).order_by('month')
+    sales_chart = filtered_sales.annotate(
+        day=TruncDate('created_at')
+    ).values('day').annotate(
+        total=Sum('total_amount'),
+        sales_count=Count('id'),
+    ).order_by('day')
+    max_chart_total = max((item['total'] or 0 for item in sales_chart), default=0)
+    sales_chart_rows = [
+        {
+            'label': item['day'].strftime('%d.%m.%Y'),
+            'total': item['total'] or 0,
+            'sales_count': item['sales_count'],
+            'width_percent': 0 if not max_chart_total else round(((item['total'] or 0) / max_chart_total) * 100, 1),
+        }
+        for item in sales_chart
+    ]
 
-    top_sellers = User.objects.filter(role='seller').annotate(
-        sales_count=Count('sales'),
-        total_sales=Sum('sales__total_amount', filter=models.Q(sales__status='completed')),
-    ).order_by('-total_sales')[:5]
+    top_sellers = User.objects.filter(
+        role='seller',
+        sales__in=filtered_sales,
+    ).annotate(
+        sales_count=Count('sales', filter=models.Q(sales__in=filtered_sales)),
+        total_sales=Sum('sales__total_amount', filter=models.Q(sales__in=filtered_sales)),
+    ).order_by('-total_sales', 'first_name', 'username')[:5]
 
     seller_rows = [
         {
@@ -1168,21 +1209,30 @@ def reports(request):
         for seller in top_sellers
     ]
 
-    top_products = SaleItem.objects.values('product__name').annotate(
+    top_products = SaleItem.objects.filter(sale__in=filtered_sales).values(
+        'product__name',
+        'product__category__name',
+    ).annotate(
         total_sold=Sum('quantity'),
         total_revenue=Sum('total_price'),
-    ).order_by('-total_revenue')[:10]
+    ).order_by('-total_revenue', '-total_sold', 'product__name')[:10]
 
     context = {
         'total_revenue': total_revenue,
         'total_sales': total_sales,
         'total_clients': total_clients,
         'total_products': total_products,
-        'daily_cash_total': daily_payment_totals['cash_total'],
-        'daily_card_total': daily_payment_totals['card_total'],
-        'sales_by_month': sales_by_month,
+        'daily_cash_total': payment_totals['cash_total'],
+        'daily_card_total': payment_totals['card_total'],
+        'sales_chart_rows': sales_chart_rows,
         'top_sellers': seller_rows,
         'top_products': top_products,
+        'seller_options': User.objects.filter(role='seller').order_by('first_name', 'username'),
+        'category_options': Category.objects.order_by('name'),
+        'selected_date_from': date_from.isoformat() if date_from else '',
+        'selected_date_to': date_to.isoformat() if date_to else '',
+        'selected_seller': seller_id,
+        'selected_category': category_id,
     }
     return render(request, 'reports.html', context)
 

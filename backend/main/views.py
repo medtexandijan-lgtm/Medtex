@@ -119,6 +119,18 @@ def build_sales_period_stats(start_date, end_date):
     }
 
 
+def build_payment_totals_for_period(start_date, end_date):
+    sales = Sale.objects.filter(
+        status='completed',
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    )
+    return {
+        'cash_total': sales.filter(payment_type='cash').aggregate(total=Sum('total_amount'))['total'] or Decimal('0'),
+        'card_total': sales.filter(payment_type='card').aggregate(total=Sum('total_amount'))['total'] or Decimal('0'),
+    }
+
+
 def build_change_stats(current_total, previous_total):
     current_total = Decimal(current_total or 0)
     previous_total = Decimal(previous_total or 0)
@@ -1131,10 +1143,12 @@ def reports(request):
             context.update(build_shift_report_context(active_shift))
         return render(request, 'reports.html', context)
 
+    today = timezone.now().date()
     total_revenue = Sale.objects.filter(status='completed').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     total_sales = Sale.objects.filter(status='completed').count()
     total_clients = Client.objects.count()
     total_products = Product.objects.count()
+    daily_payment_totals = build_payment_totals_for_period(today, today)
 
     sales_by_month = Sale.objects.filter(status='completed').extra(
         select={'month': "strftime('%%Y-%%m', created_at)"}
@@ -1164,6 +1178,8 @@ def reports(request):
         'total_sales': total_sales,
         'total_clients': total_clients,
         'total_products': total_products,
+        'daily_cash_total': daily_payment_totals['cash_total'],
+        'daily_card_total': daily_payment_totals['card_total'],
         'sales_by_month': sales_by_month,
         'top_sellers': seller_rows,
         'top_products': top_products,

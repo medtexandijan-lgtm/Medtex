@@ -172,6 +172,26 @@
                 <div class="card-label">Mahsulotlar</div>
             </div>
         </div>
+
+        <div class="card stat-card">
+            <div class="card-icon warning">
+                <svg viewBox="0 0 24 24"><path d="M3 6h18v12H3V6zm2 2v8h14V8H5zm3 2h4v2H8v-2z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ daily_cash_total|floatformat:0 }} so'm</div>
+                <div class="card-label">Bugungi naqd savdo</div>
+            </div>
+        </div>
+
+        <div class="card stat-card">
+            <div class="card-icon primary">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-2-7H6v2h12v-2z"/></svg>
+            </div>
+            <div class="stat-content">
+                <div class="card-value">{{ daily_card_total|floatformat:0 }} so'm</div>
+                <div class="card-label">Bugungi karta savdo</div>
+            </div>
+        </div>
     </div>
     
     <div class="table-container">

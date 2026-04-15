@@ -490,6 +490,31 @@ class CRMFlowTests(TestCase):
         self.assertContains(response, self.product.name)
         self.assertContains(response, '3 ta sotilgan')
 
+    def test_director_reports_show_daily_cash_and_card_totals(self):
+        Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=1800000,
+            status='completed',
+            payment_type='cash',
+        )
+        Sale.objects.create(
+            client=None,
+            seller=self.seller,
+            total_amount=950000,
+            status='completed',
+            payment_type='card',
+        )
+
+        self.client.force_login(self.director)
+        response = self.client.get(reverse('reports'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Bugungi naqd savdo')
+        self.assertContains(response, 'Bugungi karta savdo')
+        self.assertContains(response, "1800000 so'm", html=False)
+        self.assertContains(response, "950000 so'm", html=False)
+
     def test_director_can_start_shift_for_seller(self):
         self.client.force_login(self.director)
         response = self.client.post(reverse('seller_shift_start', args=[self.seller.id]))
